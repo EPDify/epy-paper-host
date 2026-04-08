@@ -151,3 +151,4 @@ void loopConfig(Portal *portal, i2c_equipment *rtc) {
       esp_deep_sleep_start();
     }
   }
+}
