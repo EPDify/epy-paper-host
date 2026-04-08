@@ -1,0 +1,72 @@
+/* --- The SVG container sizing --- */
+.charging-icon {
+    width: 80px; /* Change size here */
+    height: auto;
+    display: inline-block; /* allow inline placement next to .battery-level */
+    vertical-align: middle;
+}
+
+.charging-icon.not-charging{
+    display: none;
+}
+
+/* --- 1. The Battery Outline & Terminal Style --- */
+.battery-shell {
+    fill: none;
+    stroke: var(--battery-outline);
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* --- 2. The Filling Animation --- */
+.battery-fill {
+    fill: var(--charging-color);
+    /* Start with width 0 */
+    width: 0; 
+    /* The animation definition */
+    animation: chargeFill 3s infinite linear;
+    /* Ensure it fills from the left */
+    transform-origin: left;
+}
+
+@keyframes chargeFill {
+    0% {
+        width: 0%;
+        opacity: 1;
+    }
+    80% {
+        /* Pause briefly at full */
+        width: 82px; /* Matches the max width of the inner area in SVG */
+        opacity: 1;
+    }
+    95% {
+        width: 82px;
+        opacity: 0; /* Fade out just before restarting */
+    }
+    100% {
+        width: 0%;
+        opacity: 0;
+    }
+}
+
+/* --- 3. The Lightning Bolt Animation --- */
+.battery-bolt {
+    fill: var(--bolt-color);
+    /*Center the transform origin for scaling */
+    transform-origin: 45% 50%; 
+    animation: boltPulse 1.5s infinite ease-in-out;
+}
+
+@keyframes boltPulse {
+    0%, 100% {
+        transform: scale(0.8);
+        opacity: 0.3;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 1;
+        /* Optional: Add a subtle glow effect */
+        filter: drop-shadow(0 0 3px var(--charging-color));
+    }
+}

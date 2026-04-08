@@ -1,0 +1,268 @@
+/* Tree View Styles */
+.file-tree {
+    background: var(--card-bg, #ffffff);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    padding: 10px;
+    border: 1px solid var(--border, #e5e7eb);
+    margin-top: 15px;
+}
+
+.tree-node {
+    margin-bottom: 2px;
+}
+
+.tree-header {
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.1s;
+}
+.tree-header:hover { background-color: #f3f4f6; }
+
+.tree-children {
+    border-left: 1px solid #e5e7eb;
+    margin-left: 18px; /* Indent guide line */
+}
+
+/* Toggle arrow (▶ / ▼) */
+.toggle-icon {
+    display: inline-block;
+    width: 20px;
+    text-align: center;
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin-right: 4px;
+    transition: transform 0.2s;
+}
+.toggle-icon.open { transform: rotate(0deg); color: var(--primary, #2563eb); }
+
+/* Filenames */
+.node-label { 
+    flex-grow: 1; 
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+    font-size: 0.95rem; 
+    padding-right: 10px;
+}
+
+/* Controls Area (Right side) */
+.node-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.file-size { 
+    font-size: 0.8rem; 
+    color: #6b7280; 
+    margin-right: 5px; 
+    min-width: 60px; 
+    text-align: right; 
+}
+
+.folder-check { 
+    width: 18px; 
+    height: 18px; 
+    cursor: pointer; 
+}
+
+/* Action Buttons (Mini) */
+.btn-icon {
+    background: none;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 4px 6px;
+    font-size: 0.8rem;
+    color: #4b5563;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+}
+
+.btn-icon:hover { 
+    background: #f3f4f6; 
+    color: var(--primary, #2563eb); 
+}
+
+.btn-icon.danger:hover { 
+    background: #fee2e2; 
+    color: #dc2626; 
+    border-color: #fca5a5; 
+}
+
+.copy-btn {
+    font-size: 0.85rem;
+}
+
+/* --- Upload Overlay Specifics --- */
+.upload-tabs {
+    display: flex;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 20px;
+    gap: 10px;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-weight: 500;
+    color: #6b7280;
+    border-bottom: 2px solid transparent;
+}
+
+.tab-btn:hover { color: #374151; }
+
+.tab-btn.active {
+    color: var(--primary, #2563eb);
+    border-bottom-color: var(--primary, #2563eb);
+}
+
+.tab-content {
+    animation: fadein 0.2s;
+}
+
+#paste-content {
+    width: 100%;
+    min-height: 150px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 10px;
+    font-family: monospace;
+    font-size: 0.9rem;
+    resize: vertical;
+}
+
+#paste-filename {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+}
+
+.upload-msg {
+    margin: 15px 0;
+    font-size: 0.9rem;
+    color: #6b7280;
+    min-height: 1.2em;
+}
+
+.upload-msg.error {
+    color: #dc2626;
+}
+
+.file-drop-area {
+    border: 2px dashed #d1d5db;
+    padding: 30px;
+    min-height: 200px; /* Taller drop off */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    background: #f9fafb;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.file-drop-area.highlight {
+    border-color: var(--primary, #2563eb);
+    background: #eff6ff;
+    transform: scale(1.02);
+}
+
+/* Specific Style for Download Button in Overlay */
+.btn-download {
+    flex-grow: 1; 
+    display: flex; 
+    justify-content: center; 
+    gap: 8px; 
+    align-items: center;
+    background-color: #f3f4f6;
+    border-color: #d1d5db;
+}
+.btn-download:hover {
+    background-color: #e5e7eb;
+}
+
+/* Loading/Error States */
+.loading {
+    padding: 20px;
+    color: #6b7280;
+    text-align: center;
+    font-style: italic;
+}
+
+.drop-msg {
+    text-align: center;
+    color: #6b7280;
+    margin-bottom: 15px;
+    pointer-events: none; /* Let clicks pass through to input */
+}
+
+/* Style the file input to look like a button or cover area */
+#overlay-file-input {
+    padding: 10px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.file-list-preview {
+    margin-top: 15px;
+    font-size: 0.9rem;
+    color: #374151;
+}
+
+/* Progress List Container (Scrollable if many files) */
+.upload-progress-container {
+    max-height: 150px;
+    overflow-y: auto;
+    margin-top: 10px;
+    margin-bottom: 15px;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 10px;
+}
+
+/* Individual Progress Item */
+.upload-progress-item {
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+}
+
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 3px;
+    color: #4b5563;
+}
+
+.progress-label .fname {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 80%;
+}
+
+.progress-bar-sm {
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-fill-sm {
+    height: 100%;
+    background: var(--primary, #2563eb);
+    width: 0%;
+    transition: width 0.1s linear;
+}

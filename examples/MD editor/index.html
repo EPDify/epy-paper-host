@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimalist MD Editor</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Marked.js for parsing Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- DOMPurify for security -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="main.css">
+
+</head>
+
+<body class="antialiased selection:bg-black selection:text-white">
+
+    <!-- Header -->
+    <header
+        class="glass-panel flex-col md:flex-row sticky top-0 z-40 w-full flex items-center justify-between px-4 sm:px-8 py-3 sm:py-5 gap-3 md:gap-0">
+
+        <!-- Top Row (Mobile) / Full Header (Desktop) -->
+        <div class="flex items-center justify-between w-full md:w-auto gap-3 sm:gap-5">
+            <!-- Left: Branding & Status -->
+            <div class="flex items-center gap-3 sm:gap-5">
+                <div class="flex items-center gap-2">
+                    <div
+                        class="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-md">
+                        MD</div>
+                    <h1 class="text-xl font-extrabold tracking-tight hidden sm:block">Editor</h1>
+                </div>
+                <div class="h-6 w-px bg-gray-200 hidden sm:block"></div>
+                <span id="file-name-display"
+                    class="text-xs sm:text-sm font-medium text-gray-500 bg-black/5 px-3 sm:px-4 py-1.5 rounded-full hidden flex items-center gap-2 max-w-[140px] sm:max-w-xs overflow-hidden">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                        class="flex-shrink-0" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    <span id="file-name-text" class="truncate">untitled.md</span>
+                </span>
+            </div>
+
+            <!-- Right: Actions (Mobile right-aligned) -->
+            <div class="flex items-center gap-2 sm:gap-4 md:absolute md:right-8">
+                <button onclick="toggleInfo()"
+                    class="p-2 sm:p-2.5 text-gray-400 hover:text-black transition-colors rounded-full hover:bg-black/5"
+                    title="Markdown Cheat Sheet">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 16v-4"></path>
+                        <path d="M12 8h.01"></path>
+                    </svg>
+                </button>
+
+                <div class="h-6 w-px bg-gray-200"></div>
+
+                <button id="btn-download" onclick="downloadFile()"
+                    class="btn-action px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-bold rounded-xl bg-white border border-gray-200 text-black hover:border-gray-300 shadow-sm hidden flex items-center gap-1.5 sm:gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span class="hidden sm:inline">Download</span>
+                </button>
+
+                <button id="btn-submit" onclick="submitFile()"
+                    class="btn-action px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-bold rounded-xl bg-black text-white shadow-lg hover:shadow-xl hidden flex items-center gap-1.5 sm:gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                    <span class="hidden sm:inline">Submit</span>
+                </button>
+
+                <input type="file" id="file-upload" accept=".md,text/markdown" class="hidden"
+                    onchange="handleFileUpload(event)">
+            </div>
+        </div>
+
+        <!-- Center: Modes -->
+        <div
+            class="flex items-center w-full md:w-auto justify-between gap-1.5 bg-black/5 p-1 sm:p-1.5 rounded-xl shadow-inner md:absolute md:left-1/2 md:transform md:-translate-x-1/2">
+            <button onclick="setMode('source')"
+                class="btn-mode mode-source flex-1 md:flex-none px-4 sm:px-6 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg text-gray-600 hover:text-black hover:bg-black/5">Source</button>
+            <button onclick="setMode('split')"
+                class="btn-mode mode-split active flex-1 md:flex-none px-4 sm:px-6 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg text-gray-600 hover:text-black hover:bg-black/5">Split</button>
+            <button onclick="setMode('preview')"
+                class="btn-mode mode-preview flex-1 md:flex-none px-4 sm:px-6 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg text-gray-600 hover:text-black hover:bg-black/5">Preview</button>
+        </div>
+
+    </header>
+
+    <!-- Main Interface -->
+    <main id="main-wrapper" class="flex-1 flex w-full relative view-split bg-white overflow-hidden">
+
+        <!-- Source Editor Panel -->
+        <div id="editor-panel" class="h-full relative overflow-hidden group">
+            <textarea id="editor-textarea" class="w-full h-full p-10 bg-transparent"
+                placeholder="Start typing your minimalist masterpiece..."></textarea>
+        </div>
+
+        <!-- Live Preview Panel -->
+        <div id="preview-panel" class="h-full bg-[var(--bg-color)] overflow-y-auto relative">
+            <div id="preview-content" class="prose max-w-3xl mx-auto py-12 px-10 pb-32">
+                <!-- Rendered HTML Output -->
+            </div>
+        </div>
+
+        <!-- Empty State / File Input Overlay -->
+        <div id="empty-state"
+            class="absolute inset-0 bg-white/90 backdrop-blur-md z-20 flex flex-col items-center justify-center p-8 transition-opacity duration-300">
+            <div class="text-center max-w-lg">
+                <div
+                    class="w-20 h-20 bg-black/5 text-black rounded-3xl flex items-center justify-center mx-auto mb-8 relative border border-black/10">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="12" y1="18" x2="12" y2="12"></line>
+                        <line x1="9" y1="15" x2="15" y2="15"></line>
+                    </svg>
+                </div>
+
+                <h2 class="text-3xl font-extrabold mb-4 text-black tracking-tight">Drop a Markdown File</h2>
+                <p class="text-gray-500 mb-10 text-lg leading-relaxed">Drag and drop a .md file directly here, browse
+                    your device, or start with a blank canvas to begin writing.</p>
+
+                <div class="flex gap-4 justify-center">
+                    <button onclick="document.getElementById('file-upload').click()"
+                        class="btn-action px-8 py-4 font-bold rounded-2xl bg-black text-white shadow-xl hover:shadow-2xl">Browse
+                        Files</button>
+                    <button onclick="startEmpty()"
+                        class="btn-action px-8 py-4 font-bold rounded-2xl bg-white border-2 border-gray-100 text-black hover:border-gray-200 hover:bg-gray-50">Start
+                        Blank</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Drag & Drop Fullscreen Overlay -->
+        <div id="drag-overlay"
+            class="absolute inset-0 bg-black/10 backdrop-blur-sm z-50 flex items-center justify-center p-8">
+            <div
+                class="w-full h-full border-4 border-dashed border-black rounded-3xl flex items-center justify-center bg-white/50">
+                <h2 class="text-4xl font-extrabold text-black bg-white px-10 py-5 rounded-2xl shadow-2xl">Release to
+                    Open</h2>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Markdown Cheat Sheet Modal Overlay -->
+    <div id="info-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="toggleInfo()"></div>
+
+        <!-- Modal Content -->
+        <div class="glass-card w-[95%] sm:w-full max-w-3xl rounded-3xl p-6 sm:p-10 relative z-10 transform scale-95 opacity-0 transition-all duration-300"
+            id="info-content">
+
+            <!-- Close Button -->
+            <button onclick="toggleInfo()"
+                class="absolute top-8 right-8 text-gray-400 hover:text-black transition-colors rounded-full p-2 bg-gray-100 hover:bg-gray-200">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+
+            <!-- Header -->
+            <div class="mb-8 flex items-center gap-4 border-b border-gray-200 pb-6">
+                <div class="p-3 bg-black text-white rounded-xl">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 16v-4"></path>
+                        <path d="M12 8h.01"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-extrabold tracking-tight text-black">Markdown Editor Cheat Sheet</h3>
+                    <p class="text-gray-500 font-medium mt-1">Quick formatting references</p>
+                </div>
+            </div>
+
+            <!-- Content Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-6 sm:gap-y-8 max-h-[70vh] overflow-y-auto pr-2">
+
+                <!-- Headers -->
+                <div>
+                    <h4 class="font-bold text-gray-400 uppercase tracking-widest text-xs mb-4">Headers</h4>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center"><code
+                                class="bg-gray-100/80 px-2 py-1.5 rounded font-mono text-sm text-black border border-gray-200"># Header 1</code>
+                            <span class="text-xl font-bold">H1</span>
+                        </div>
+                        <div class="flex justify-between items-center"><code
+                                class="bg-gray-100/80 px-2 py-1.5 rounded font-mono text-sm text-black border border-gray-200">## Header 2</code>
+                            <span class="text-lg font-bold">H2</span>
+                        </div>
+                        <div class="flex justify-between items-center"><code
+                                class="bg-gray-100/80 px-2 py-1.5 rounded font-mono text-sm text-black border border-gray-200">### Header 3</code>
+                            <span class="font-bold">H3</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Emphasis -->
+                <div>
+                    <h4 class="font-bold text-gray-400 uppercase tracking-widest text-xs mb-4">Emphasis</h4>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center"><code
+                                class="bg-gray-100/80 px-2 py-1.5 rounded font-mono text-sm text-black border border-gray-200">*italic*</code>
+                            <span class="italic">italic</span>
+                        </div>
+                        <div class="flex justify-between items-center"><code
+                                class="bg-gray-100/80 px-2 py-1.5 rounded font-mono text-sm text-black border border-gray-200">**bold**</code>
+                            <span class="font-bold">bold</span>
+                        </div>
+                        <div class="flex justify-between items-center"><code
+                                class="bg-gray-100/80 px-2 py-1.5 rounded font-mono text-sm text-black border border-gray-200">~~strike~~</code>
+                            <span class="line-through">strike</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lists -->
+                <div>
+                    <h4 class="font-bold text-gray-400 uppercase tracking-widest text-xs mb-4">Lists</h4>
+                    <div
+                        class="bg-gray-100/80 p-4 rounded-xl font-mono text-sm text-black border border-gray-200 leading-relaxed">
+                        - Item 1<br>
+                        - Item 2<br>
+                        &nbsp;&nbsp;- Subitem<br><br>
+                        1. First item<br>
+                        2. Second item
+                    </div>
+                </div>
+
+                <!-- Links & Images -->
+                <div>
+                    <h4 class="font-bold text-gray-400 uppercase tracking-widest text-xs mb-4">Media</h4>
+                    <div class="space-y-3">
+                        <div class="flex flex-col gap-1">
+                            <span class="text-sm font-medium text-gray-600">Link</span>
+                            <code
+                                class="bg-gray-100/80 px-3 py-2 rounded font-mono text-sm text-black border border-gray-200">[Text](url)</code>
+                        </div>
+                        <div class="flex flex-col gap-1 mt-3">
+                            <span class="text-sm font-medium text-gray-600">Image</span>
+                            <code
+                                class="bg-gray-100/80 px-3 py-2 rounded font-mono text-sm text-black border border-gray-200">![Alt Text](img.jpg)</code>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Code block spanning full width -->
+                <div class="col-span-2 mt-2">
+                    <h4 class="font-bold text-gray-400 uppercase tracking-widest text-xs mb-4">Code Blocks</h4>
+                    <div
+                        class="bg-black p-5 rounded-xl text-white font-mono text-sm shadow-inner overflow-hidden border border-gray-800">
+                        <span class="text-gray-500">```javascript</span><br>
+                        <span class="text-blue-400">function</span> <span class="text-yellow-300">greet</span>() {<br>
+                        &nbsp;&nbsp;<span class="text-blue-400">return</span> <span class="text-green-300">"Hello
+                            World!"</span>;<br>
+                        }<br>
+                        <span class="text-gray-500">```</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom JS -->
+    <script src="main.js"></script>
+</body>
+
+</html>

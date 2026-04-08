@@ -1,0 +1,200 @@
+/* Tools Grid Layout */
+.tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+    padding: 10px 0;
+}
+
+/* Stats Container (Flex wrapper for stats & toggle) */
+.tool-stats-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: -15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap; /* Helps on smaller screens */
+    gap: 15px;
+}
+
+/* Stats Typography */
+.tool-stats {
+    font-size: 0.85rem;
+    color: #6b7280;
+    display: flex;
+    gap: 15px;
+}
+
+.stat-item strong {
+    color: #374151;
+    font-weight: 600;
+}
+
+/* Toggle Switch Styling */
+.tool-filter {
+    display: flex;
+    align-items: center;
+}
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #4b5563;
+    user-select: none;
+}
+.toggle-label input[type="checkbox"] {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+}
+
+/* Tool Card Styling */
+.tool-card {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: var(--card-bg, #ffffff);
+    padding: 20px;
+    border-radius: 12px;
+    text-decoration: none;
+    color: var(--text, #1f2937);
+    border: 1px solid var(--border, #e5e7eb);
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    position: relative; 
+    overflow: visible; 
+}
+
+.tool-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    border-color: var(--primary, #2563eb);
+}
+
+/* EPY App Specific Styling */
+.tool-card.epy {
+    background-color: #dcfce7;
+    border-color: #86efac;
+}
+
+.tool-card.epy:hover {
+    border-color: #16a34a; 
+}
+
+/* EPY Badge (Top Left) */
+.epy-badge {
+    position: absolute;
+    top: -1px; 
+    left: -1px;
+    background: #16a34a;
+    color: white;
+    font-size: 0.65rem;
+    font-weight: bold;
+    padding: 2px 8px;
+    border-bottom-right-radius: 8px;
+    border-top-left-radius: 12px; 
+    z-index: 5;
+    box-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+}
+
+/* Icon & Text */
+.tool-icon {
+    font-size: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: rgba(255,255,255,0.6);
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.tool-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.tool-info strong {
+    font-size: 1rem;
+    margin-bottom: 2px;
+}
+
+.tool-info small {
+    color: #6b7280;
+    font-size: 0.85rem;
+    line-height: 1.2;
+}
+
+/* Edit Mode Styles */
+.tool-card.editable {
+    cursor: pointer;
+    border-style: dashed;
+    border-color: #94a3b8;
+}
+
+/* Delete Button (Top Right) */
+.delete-btn {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 26px;
+    height: 26px;
+    background: #ef4444;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    z-index: 10;
+    transition: transform 0.2s;
+    border: 2px solid white; 
+}
+
+.delete-btn:hover {
+    transform: scale(1.1);
+    background: #dc2626;
+}
+
+/* Placeholder */
+.tool-card.placeholder {
+    justify-content: center;
+    border: 2px dashed #cbd5e1;
+    color: #94a3b8;
+    cursor: pointer;
+    background: transparent;
+    min-height: 90px;
+}
+
+.tool-card.placeholder:hover {
+    border-color: var(--primary, #2563eb);
+    color: var(--primary, #2563eb);
+    background: #eff6ff;
+}
+
+.plus-icon { font-size: 32px; font-weight: bold; }
+
+/* Modal specific inputs */
+.modal-form .form-group { margin-bottom: 15px; }
+.modal-form label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.9rem; color: #374151; }
+.modal-form input[type="text"], .modal-form select { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; }
+.validation-error { color: #dc2626; font-size: 0.8rem; margin-top: 4px; display: block; }
+.checkbox-group { display: flex; align-items: center; gap: 8px; }
+.checkbox-group input { width: auto; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e5e7eb; }
+
+/* Mobile Adjusments */
+@media (max-width: 600px) {
+    .tool-stats-container {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+}

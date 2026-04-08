@@ -1,0 +1,227 @@
+/* Vaults Container */
+#vaults-container {
+    margin-top: 20px;
+}
+
+/* Accordion Styles */
+.accordion-item {
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.accordion-header {
+    padding: 15px;
+    background: #f9fafb;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 500;
+    user-select: none;
+    transition: background 0.2s;
+}
+
+.accordion-header:hover {
+    background: #f3f4f6;
+}
+
+.accordion-item.active .accordion-header {
+    background: #eff6ff;
+    color: var(--primary, #2563eb);
+    border-bottom: 1px solid var(--border, #e5e7eb);
+}
+
+.accordion-body {
+    display: none;
+    padding: 20px;
+    background: #fff;
+}
+
+.accordion-item.active .accordion-body {
+    display: block;
+}
+
+/* Vault Entry Styling */
+.vault-entry {
+    border: 1px solid #e5e7eb;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    background: #fafafa;
+}
+
+.entry-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.entry-col {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.entry-col label {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.entry-name, .entry-desc {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.entry-name:focus, .entry-desc:focus, .vault-name-input:focus, .vault-desc-input:focus {
+    outline: none;
+    border-color: var(--primary, #2563eb);
+}
+
+.entry-val {
+    width: 100%;
+    min-height: 80px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.9rem;
+    resize: vertical;
+    line-height: 1.4;
+    color: #1f2937;
+    background: #fff;
+}
+
+.entry-val:focus {
+    outline: none;
+    border-color: var(--primary, #2563eb);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.remove-entry-btn {
+    height: 36px;
+    width: 36px;
+    margin-bottom: 1px; /* Align with inputs */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #fecaca;
+    background: #fee2e2;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.remove-entry-btn:hover {
+    background: #fecaca;
+}
+
+/* Vault Meta Inputs */
+.vault-meta .form-group {
+    margin-bottom: 15px;
+}
+.vault-meta label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: #374151;
+}
+.vault-name-input, .vault-desc-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+/* Action Buttons */
+.vault-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.action-spacer {
+    flex-grow: 1;
+}
+
+/* Modal Form Styles */
+.modal-form {
+    margin-top: 15px;
+}
+
+.modal-form .form-group {
+    margin-bottom: 15px;
+}
+
+.modal-form label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: #374151;
+}
+
+.modal-form input[type="text"],
+.modal-form input[type="password"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 1rem;
+    box-sizing: border-box;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.modal-form input:focus {
+    outline: none;
+    border-color: var(--primary, #2563eb);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.hint-text {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-top: 10px;
+    margin-bottom: 20px;
+    padding: 8px 12px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    border-left: 3px solid #9ca3af;
+}
+
+.loading {
+    padding: 20px;
+    text-align: center;
+    color: #6b7280;
+    font-style: italic;
+}
+
+/* Mobile Tweak for Entry Rows */
+@media (max-width: 600px) {
+    .entry-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+    .entry-col {
+        width: 100%;
+    }
+    .remove-entry-btn {
+        width: 100%;
+        margin-top: 5px;
+    }
+}

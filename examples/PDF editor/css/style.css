@@ -1,0 +1,1498 @@
+/* ============================================
+   PDF Editor -- Design Tokens
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* ---- Color Palette (Dark-first) ---- */
+  --color-bg-primary:       #0f1117;
+  --color-bg-secondary:     #181b24;
+  --color-bg-tertiary:      #1e2230;
+  --color-bg-elevated:      #252a3a;
+  --color-bg-hover:         #2c3247;
+  --color-bg-active:        #353c54;
+
+  --color-surface:          #1a1e2c;
+  --color-surface-hover:    #232838;
+  --color-surface-border:   #2a3042;
+
+  --color-text-primary:     #e8eaef;
+  --color-text-secondary:   #9ca3b4;
+  --color-text-tertiary:    #6b7280;
+  --color-text-disabled:    #4b5263;
+
+  /* Accent -- vibrant blue-violet */
+  --color-accent:           #6c5ce7;
+  --color-accent-hover:     #7e70f0;
+  --color-accent-active:    #5a4bd6;
+  --color-accent-soft:      rgba(108, 92, 231, 0.15);
+  --color-accent-text:      #a29bfe;
+
+  /* Semantic */
+  --color-success:          #00cec9;
+  --color-success-soft:     rgba(0, 206, 201, 0.12);
+  --color-warning:          #fdcb6e;
+  --color-warning-soft:     rgba(253, 203, 110, 0.12);
+  --color-danger:           #ff6b6b;
+  --color-danger-soft:      rgba(255, 107, 107, 0.12);
+  --color-info:             #74b9ff;
+  --color-info-soft:        rgba(116, 185, 255, 0.12);
+
+  /* Redaction */
+  --color-redact:           #1a1a1a;
+  --color-redact-preview:   rgba(255, 60, 60, 0.25);
+
+  /* Highlight */
+  --color-highlight:        rgba(253, 203, 110, 0.35);
+
+  /* ---- Typography ---- */
+  --font-family:            'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-size-xs:           0.6875rem;   /* 11px */
+  --font-size-sm:           0.75rem;     /* 12px */
+  --font-size-base:         0.8125rem;   /* 13px */
+  --font-size-md:           0.875rem;    /* 14px */
+  --font-size-lg:           1rem;        /* 16px */
+  --font-size-xl:           1.25rem;     /* 20px */
+  --font-size-2xl:          1.5rem;      /* 24px */
+  --font-size-3xl:          2rem;        /* 32px */
+
+  --font-weight-light:      300;
+  --font-weight-regular:    400;
+  --font-weight-medium:     500;
+  --font-weight-semibold:   600;
+  --font-weight-bold:       700;
+
+  --line-height-tight:      1.2;
+  --line-height-normal:     1.5;
+  --line-height-relaxed:    1.75;
+
+  /* ---- Spacing ---- */
+  --space-1:   0.25rem;    /* 4px  */
+  --space-2:   0.5rem;     /* 8px  */
+  --space-3:   0.75rem;    /* 12px */
+  --space-4:   1rem;       /* 16px */
+  --space-5:   1.25rem;    /* 20px */
+  --space-6:   1.5rem;     /* 24px */
+  --space-8:   2rem;       /* 32px */
+  --space-10:  2.5rem;     /* 40px */
+  --space-12:  3rem;       /* 48px */
+  --space-16:  4rem;       /* 64px */
+
+  /* ---- Borders & Radius ---- */
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
+  --radius-2xl:  24px;
+  --radius-full: 9999px;
+
+  --border-width:  1px;
+  --border-color:  var(--color-surface-border);
+
+  /* ---- Shadows ---- */
+  --shadow-sm:     0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md:     0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-lg:     0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-xl:     0 12px 40px rgba(0, 0, 0, 0.5);
+  --shadow-glow:   0 0 20px rgba(108, 92, 231, 0.3);
+
+  /* ---- Glass ---- */
+  --glass-bg:      rgba(24, 27, 36, 0.75);
+  --glass-blur:    12px;
+  --glass-border:  rgba(255, 255, 255, 0.06);
+
+  /* ---- Transitions ---- */
+  --transition-fast:     150ms ease;
+  --transition-normal:   250ms ease;
+  --transition-slow:     400ms ease;
+  --transition-spring:   400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ---- Z-Index Scale ---- */
+  --z-base:       1;
+  --z-sidebar:    10;
+  --z-toolbar:    20;
+  --z-dropdown:   30;
+  --z-modal:      40;
+  --z-toast:      50;
+  --z-tooltip:    60;
+
+  /* ---- Layout ---- */
+  --sidebar-width:        220px;
+  --sidebar-width-collapsed: 0px;
+  --toolbar-height:       48px;
+  --header-height:        52px;
+}
+
+/* ============================================
+   Light Mode Override
+   ============================================ */
+[data-theme="light"] {
+  --color-bg-primary:       #f5f6fa;
+  --color-bg-secondary:     #ffffff;
+  --color-bg-tertiary:      #eef0f6;
+  --color-bg-elevated:      #ffffff;
+  --color-bg-hover:         #e8ebf2;
+  --color-bg-active:        #dde1ec;
+
+  --color-surface:          #ffffff;
+  --color-surface-hover:    #f0f2f8;
+  --color-surface-border:   #d4d8e4;
+
+  --color-text-primary:     #1a1e2c;
+  --color-text-secondary:   #5b6478;
+  --color-text-tertiary:    #8790a5;
+  --color-text-disabled:    #b4baca;
+
+  --color-accent:           #6c5ce7;
+  --color-accent-hover:     #5a4bd6;
+  --color-accent-active:    #4a3cc5;
+  --color-accent-soft:      rgba(108, 92, 231, 0.1);
+  --color-accent-text:      #6c5ce7;
+
+  --shadow-sm:     0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md:     0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg:     0 8px 24px rgba(0, 0, 0, 0.1);
+  --shadow-xl:     0 12px 40px rgba(0, 0, 0, 0.12);
+
+  --glass-bg:      rgba(255, 255, 255, 0.8);
+  --glass-border:  rgba(0, 0, 0, 0.06);
+}
+
+/* ============================================
+   Global Reset & Base
+   ============================================ */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+a { color: var(--color-accent-text); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+button {
+  font-family: var(--font-family);
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: inherit;
+}
+
+input, select, textarea {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  background: var(--color-bg-tertiary);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-bg-hover);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-bg-active);
+}
+
+::selection {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+}
+/* ============================================
+   PDF Editor -- Layout System
+   ============================================ */
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+}
+
+/* ---- Header Bar ---- */
+.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: var(--header-height);
+    padding: 0 var(--space-4);
+    background: var(--color-bg-secondary);
+    border-bottom: var(--border-width) solid var(--border-color);
+    z-index: var(--z-toolbar);
+    flex-shrink: 0;
+}
+
+.app-header__logo {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+}
+
+.app-header__logo-icon {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, var(--color-accent), #a29bfe);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: var(--font-size-md);
+}
+
+.app-header__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+/* ---- Main Workspace ---- */
+.app-workspace {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+/* ---- Sidebar ---- */
+.app-sidebar {
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    background: var(--color-bg-secondary);
+    border-right: var(--border-width) solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    z-index: var(--z-sidebar);
+    transition: width var(--transition-normal),
+        min-width var(--transition-normal),
+        opacity var(--transition-normal);
+    overflow: hidden;
+}
+
+.app-sidebar.collapsed {
+    width: 0;
+    min-width: 0;
+    border-right-width: 0;
+    padding: 0;
+}
+
+.app-sidebar__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3) var(--space-3);
+    border-bottom: var(--border-width) solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.app-sidebar__title {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.app-sidebar__content {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-2);
+}
+
+/* ---- Viewer Area ---- */
+.app-viewer {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--color-bg-primary);
+    position: relative;
+}
+
+.app-viewer__toolbar {
+    flex-shrink: 0;
+}
+
+.app-viewer__canvas-area {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+    padding: var(--space-6);
+    background: var(--color-bg-primary);
+    position: relative;
+}
+
+.app-viewer__pages {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+/* ---- Page Navigation Bar (bottom) ---- */
+.app-page-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-4);
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border-top: var(--border-width) solid var(--glass-border);
+    flex-shrink: 0;
+    position: absolute;
+    bottom: var(--space-4);
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    z-index: var(--z-base);
+}
+
+.app-page-nav__input {
+    width: 48px;
+    text-align: center;
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--font-size-sm);
+    background: var(--color-bg-tertiary);
+}
+
+.app-page-nav__total {
+    color: var(--color-text-tertiary);
+    font-size: var(--font-size-sm);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+    .app-sidebar {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: calc(var(--z-sidebar) + 5);
+        box-shadow: var(--shadow-xl);
+    }
+
+    .app-sidebar.collapsed {
+        transform: translateX(-100%);
+    }
+
+    .app-page-nav {
+        left: var(--space-2);
+        right: var(--space-2);
+        transform: none;
+    }
+}/* ============================================
+   PDF Editor -- Landing / Upload Page
+   ============================================ */
+
+.landing {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: var(--space-8);
+    background: var(--color-bg-primary);
+    position: relative;
+    overflow: hidden;
+}
+
+/* ---- Animated Background ---- */
+.landing::before {
+    content: '';
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--color-accent-soft) 0%, transparent 70%);
+    top: -200px;
+    right: -200px;
+    animation: landing-glow 8s ease-in-out infinite alternate;
+    pointer-events: none;
+}
+
+.landing::after {
+    content: '';
+    position: absolute;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 206, 201, 0.08) 0%, transparent 70%);
+    bottom: -150px;
+    left: -100px;
+    animation: landing-glow 6s ease-in-out 2s infinite alternate;
+    pointer-events: none;
+}
+
+@keyframes landing-glow {
+    from {
+        transform: scale(1);
+        opacity: 0.6;
+    }
+
+    to {
+        transform: scale(1.2);
+        opacity: 1;
+    }
+}
+
+/* ---- Landing Content ---- */
+.landing__content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-8);
+    max-width: 600px;
+    text-align: center;
+}
+
+.landing__icon {
+    width: 72px;
+    height: 72px;
+    background: linear-gradient(135deg, var(--color-accent), #a29bfe);
+    border-radius: var(--radius-2xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-glow);
+    animation: landing-icon-float 4s ease-in-out infinite;
+}
+
+@keyframes landing-icon-float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+.landing__icon svg {
+    width: 36px;
+    height: 36px;
+    color: white;
+}
+
+.landing__title {
+    font-size: var(--font-size-3xl);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-tight);
+    background: linear-gradient(135deg, var(--color-text-primary) 0%, var(--color-accent-text) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.landing__subtitle {
+    font-size: var(--font-size-md);
+    color: var(--color-text-secondary);
+    max-width: 440px;
+    line-height: var(--line-height-relaxed);
+}
+
+/* ---- Drop Zone ---- */
+.drop-zone {
+    width: 100%;
+    max-width: 520px;
+    padding: var(--space-10) var(--space-8);
+    border: 2px dashed var(--color-surface-border);
+    border-radius: var(--radius-xl);
+    background: var(--color-surface);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    position: relative;
+}
+
+.drop-zone:hover {
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
+}
+
+.drop-zone.drag-over {
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
+    transform: scale(1.02);
+    box-shadow: var(--shadow-glow);
+}
+
+.drop-zone__icon {
+    width: 48px;
+    height: 48px;
+    color: var(--color-text-tertiary);
+    transition: color var(--transition-fast);
+}
+
+.drop-zone:hover .drop-zone__icon,
+.drop-zone.drag-over .drop-zone__icon {
+    color: var(--color-accent);
+}
+
+.drop-zone__text {
+    font-size: var(--font-size-md);
+    color: var(--color-text-secondary);
+}
+
+.drop-zone__text strong {
+    color: var(--color-accent-text);
+    font-weight: var(--font-weight-semibold);
+}
+
+.drop-zone__hint {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-tertiary);
+}
+
+.drop-zone__input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+/* ---- Feature Cards ---- */
+.landing__features {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-4);
+    width: 100%;
+    max-width: 520px;
+}
+
+.feature-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    background: var(--color-surface);
+    border: var(--border-width) solid var(--border-color);
+    border-radius: var(--radius-lg);
+    transition: all var(--transition-fast);
+}
+
+.feature-card:hover {
+    background: var(--color-surface-hover);
+    border-color: var(--color-accent-soft);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.feature-card__icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    background: var(--color-accent-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-accent);
+}
+
+.feature-card__icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.feature-card__label {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-secondary);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 600px) {
+    .landing__title {
+        font-size: var(--font-size-2xl);
+    }
+
+    .landing__features {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .drop-zone {
+        padding: var(--space-6) var(--space-4);
+    }
+}/* ============================================
+   PDF Editor -- Modals, Toasts & Overlays
+   ============================================ */
+
+/* ---- Modal Backdrop ---- */
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: var(--z-modal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-normal);
+}
+
+.modal-backdrop.open {
+    opacity: 1;
+    pointer-events: all;
+}
+
+/* ---- Modal Panel ---- */
+.modal {
+    background: var(--color-bg-secondary);
+    border: var(--border-width) solid var(--border-color);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    width: 90%;
+    max-width: 480px;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transform: scale(0.95) translateY(10px);
+    transition: transform var(--transition-spring);
+}
+
+.modal-backdrop.open .modal {
+    transform: scale(1) translateY(0);
+}
+
+.modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-4) var(--space-5);
+    border-bottom: var(--border-width) solid var(--border-color);
+}
+
+.modal__title {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+}
+
+.modal__close {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    color: var(--color-text-tertiary);
+    transition: all var(--transition-fast);
+}
+
+.modal__close:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+}
+
+.modal__body {
+    padding: var(--space-5);
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal__footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-5);
+    border-top: var(--border-width) solid var(--border-color);
+}
+
+/* ---- Toast Notifications ---- */
+.toast-container {
+    position: fixed;
+    top: var(--space-4);
+    right: var(--space-4);
+    z-index: var(--z-toast);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    pointer-events: none;
+}
+
+.toast {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-bg-elevated);
+    border: var(--border-width) solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-primary);
+    pointer-events: all;
+    max-width: 360px;
+    animation: toast-in var(--transition-spring) forwards;
+}
+
+.toast.toast-out {
+    animation: toast-out var(--transition-normal) forwards;
+}
+
+.toast__icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.toast--success {
+    border-left: 3px solid var(--color-success);
+}
+
+.toast--success .toast__icon {
+    color: var(--color-success);
+}
+
+.toast--error {
+    border-left: 3px solid var(--color-danger);
+}
+
+.toast--error .toast__icon {
+    color: var(--color-danger);
+}
+
+.toast--warning {
+    border-left: 3px solid var(--color-warning);
+}
+
+.toast--warning .toast__icon {
+    color: var(--color-warning);
+}
+
+.toast--info {
+    border-left: 3px solid var(--color-info);
+}
+
+.toast--info .toast__icon {
+    color: var(--color-info);
+}
+
+.toast__close {
+    margin-left: auto;
+    width: 20px;
+    height: 20px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-tertiary);
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.toast__close:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+}
+
+@keyframes toast-in {
+    from {
+        opacity: 0;
+        transform: translateX(20px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes toast-out {
+    from {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateX(20px) scale(0.95);
+    }
+}
+
+/* ---- Spinner Overlay ---- */
+.spinner-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: var(--z-modal);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-normal);
+}
+
+.spinner-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--color-bg-hover);
+    border-top-color: var(--color-accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.spinner-overlay__text {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-medium);
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ---- Progress Bar ---- */
+.progress-bar {
+    width: 200px;
+    height: 4px;
+    background: var(--color-bg-hover);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.progress-bar__fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-accent), #a29bfe);
+    border-radius: var(--radius-full);
+    transition: width var(--transition-normal);
+    width: 0%;
+}
+
+/* ---- Context Menu ---- */
+.context-menu {
+    position: fixed;
+    background: var(--color-bg-elevated);
+    border: var(--border-width) solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    padding: var(--space-1);
+    z-index: var(--z-dropdown);
+    min-width: 180px;
+    animation: context-menu-in 150ms ease forwards;
+}
+
+@keyframes context-menu-in {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.context-menu__item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--font-size-sm);
+    border-radius: var(--radius-md);
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+    width: 100%;
+    text-align: left;
+}
+
+.context-menu__item:hover {
+    background: var(--color-bg-hover);
+}
+
+.context-menu__item--danger:hover {
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
+}
+
+.context-menu__item svg {
+    width: 16px;
+    height: 16px;
+    color: var(--color-text-tertiary);
+}
+
+.context-menu__item:hover svg {
+    color: inherit;
+}
+
+.context-menu__separator {
+    height: 1px;
+    background: var(--border-color);
+    margin: var(--space-1) 0;
+}
+
+.context-menu__shortcut {
+    margin-left: auto;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-tertiary);
+}/* ============================================
+   PDF Editor -- Sidebar (Thumbnails)
+   ============================================ */
+
+/* ---- Thumbnail Grid ---- */
+.thumbnail-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-1);
+}
+
+/* ---- Thumbnail Item ---- */
+.thumbnail-item {
+    position: relative;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border: 2px solid transparent;
+    background: var(--color-bg-tertiary);
+}
+
+.thumbnail-item:hover {
+    border-color: var(--color-bg-hover);
+    transform: scale(1.02);
+}
+
+.thumbnail-item.active {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 1px var(--color-accent-soft);
+}
+
+.thumbnail-item.dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+}
+
+.thumbnail-item.drag-over {
+    border-color: var(--color-accent);
+    border-style: dashed;
+}
+
+.thumbnail-item canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius-sm);
+}
+
+/* ---- Thumbnail Page Label ---- */
+.thumbnail-item__label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-1);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-tertiary);
+}
+
+.thumbnail-item.active .thumbnail-item__label {
+    color: var(--color-accent-text);
+}
+
+/* ---- Thumbnail Actions Overlay ---- */
+.thumbnail-item__actions {
+    position: absolute;
+    top: var(--space-1);
+    right: var(--space-1);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+}
+
+.thumbnail-item:hover .thumbnail-item__actions {
+    opacity: 1;
+}
+
+.thumbnail-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-sm);
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    color: var(--color-text-secondary);
+    transition: all var(--transition-fast);
+}
+
+.thumbnail-action-btn:hover {
+    background: var(--color-bg-elevated);
+    color: var(--color-text-primary);
+}
+
+.thumbnail-action-btn--danger:hover {
+    background: var(--color-danger);
+    color: white;
+}
+
+.thumbnail-action-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* ---- Sidebar Footer Actions ---- */
+.sidebar-footer {
+    padding: var(--space-2) var(--space-3);
+    border-top: var(--border-width) solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.sidebar-footer .action-btn {
+    width: 100%;
+    justify-content: center;
+}
+
+/* ---- Drop Indicator ---- */
+.drop-indicator {
+    height: 2px;
+    background: var(--color-accent);
+    border-radius: var(--radius-full);
+    margin: var(--space-1) 0;
+    transition: opacity var(--transition-fast);
+    opacity: 0;
+}
+
+.drop-indicator.visible {
+    opacity: 1;
+}/* ============================================
+   PDF Editor -- Toolbar Styles
+   ============================================ */
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    height: var(--toolbar-height);
+    padding: 0 var(--space-3);
+    background: var(--color-bg-secondary);
+    border-bottom: var(--border-width) solid var(--border-color);
+    gap: var(--space-1);
+    overflow-x: auto;
+    flex-shrink: 0;
+}
+
+.toolbar::-webkit-scrollbar {
+    height: 0;
+}
+
+/* ---- Separator ---- */
+.toolbar__separator {
+    width: 1px;
+    height: 24px;
+    background: var(--border-color);
+    margin: 0 var(--space-2);
+    flex-shrink: 0;
+}
+
+/* ---- Tool Group ---- */
+.toolbar__group {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    flex-shrink: 0;
+}
+
+.toolbar__group-label {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-right: var(--space-1);
+    white-space: nowrap;
+}
+
+/* ---- Tool Button ---- */
+.tool-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+    transition: all var(--transition-fast);
+    position: relative;
+    flex-shrink: 0;
+}
+
+.tool-btn:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+}
+
+.tool-btn:active {
+    background: var(--color-bg-active);
+    transform: scale(0.95);
+}
+
+.tool-btn.active {
+    background: var(--color-accent-soft);
+    color: var(--color-accent);
+    box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+
+.tool-btn:disabled {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
+.tool-btn svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+/* With label variant */
+.tool-btn--labeled {
+    width: auto;
+    padding: 0 var(--space-3);
+    gap: var(--space-2);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+}
+
+/* ---- Tooltip ---- */
+.tool-btn[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: var(--space-1) var(--space-2);
+    background: var(--color-bg-elevated);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-md);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-fast), transform var(--transition-fast);
+    transform: translateX(-50%) translateY(4px);
+    z-index: var(--z-tooltip);
+}
+
+.tool-btn[data-tooltip]:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* ---- Toolbar Select ---- */
+.toolbar__select {
+    height: 30px;
+    padding: 0 var(--space-6) 0 var(--space-2);
+    font-size: var(--font-size-sm);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-tertiary);
+    border: var(--border-width) solid var(--border-color);
+    color: var(--color-text-primary);
+    appearance: none;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3b4' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+}
+
+/* ---- Color Picker Swatch ---- */
+.toolbar__color-picker {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--border-color);
+    cursor: pointer;
+    padding: 0;
+    overflow: hidden;
+}
+
+.toolbar__color-picker::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.toolbar__color-picker::-webkit-color-swatch {
+    border: none;
+    border-radius: var(--radius-sm);
+}
+
+/* ---- Action Buttons (header) ---- */
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.action-btn--primary {
+    background: var(--color-accent);
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.action-btn--primary:hover {
+    background: var(--color-accent-hover);
+    box-shadow: var(--shadow-glow);
+    transform: translateY(-1px);
+}
+
+.action-btn--primary:active {
+    background: var(--color-accent-active);
+    transform: translateY(0);
+}
+
+.action-btn--secondary {
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+    border: var(--border-width) solid var(--border-color);
+}
+
+.action-btn--secondary:hover {
+    background: var(--color-bg-hover);
+    border-color: var(--color-text-tertiary);
+}
+
+.action-btn--danger {
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
+}
+
+.action-btn--danger:hover {
+    background: var(--color-danger);
+    color: white;
+}
+
+.action-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* ---- Zoom Controls ---- */
+.zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin-left: auto;
+}
+
+.zoom-controls__label {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    min-width: 40px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}/* ============================================
+   PDF Editor -- Viewer & Canvas Styles
+   ============================================ */
+
+/* ---- Page Wrapper ---- */
+.pdf-page-wrapper {
+    position: relative;
+    box-shadow: var(--shadow-lg);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: white;
+    transition: box-shadow var(--transition-normal);
+    flex-shrink: 0;
+}
+
+.pdf-page-wrapper:hover {
+    box-shadow: var(--shadow-xl);
+}
+
+.pdf-page-wrapper.active {
+    box-shadow: 0 0 0 2px var(--color-accent), var(--shadow-xl);
+}
+
+/* The pdf.js render canvas */
+.pdf-page-wrapper canvas.pdf-canvas {
+    display: block;
+}
+
+/* The Fabric.js overlay canvas */
+.pdf-page-wrapper .annotation-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+}
+
+/* ---- Page Number Badge ---- */
+.pdf-page-wrapper__badge {
+    position: absolute;
+    bottom: var(--space-2);
+    right: var(--space-2);
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    z-index: 3;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+    pointer-events: none;
+}
+
+.pdf-page-wrapper:hover .pdf-page-wrapper__badge {
+    opacity: 1;
+}
+
+/* ---- Loading Skeleton ---- */
+.pdf-page-skeleton {
+    background: var(--color-bg-tertiary);
+    border-radius: var(--radius-sm);
+    animation: skeleton-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+
+    0%,
+    100% {
+        opacity: 0.4;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+}
+
+/* ---- Empty State ---- */
+.viewer-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--color-text-tertiary);
+    gap: var(--space-4);
+}
+
+.viewer-empty svg {
+    width: 64px;
+    height: 64px;
+    opacity: 0.4;
+}
+
+.viewer-empty__text {
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-medium);
+}
+
+/* ---- Cursor Modes ---- */
+.cursor-crosshair .annotation-layer canvas {
+    cursor: crosshair !important;
+}
+
+.cursor-text .annotation-layer canvas {
+    cursor: text !important;
+}
+
+.cursor-draw .annotation-layer canvas {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='3' fill='%236c5ce7' opacity='0.6'/%3E%3C/svg%3E") 12 12, crosshair !important;
+}
+
+.cursor-highlight .annotation-layer canvas {
+    cursor: text !important;
+}
+
+.cursor-redact .annotation-layer canvas {
+    cursor: crosshair !important;
+}
+
+/* ---- Fabric.js Canvas Container ---- */
+/* Fabric.js wraps our .annotation-layer canvas inside a .canvas-container div.
+   This container must be absolutely positioned over the PDF canvas. */
+.pdf-page-wrapper>.canvas-container {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+}
+
+/* ---- Zoom animation ---- */
+.app-viewer__pages {
+    transition: transform var(--transition-normal);
+    transform-origin: top center;
+}

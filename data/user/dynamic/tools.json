@@ -1,0 +1,76 @@
+{
+    "tools": [
+        {
+            "id": "JNvnnK2KnC7G",
+            "name": "JSON Editor",
+            "description": "Validate and format JSON",
+            "endpoint": "/JSON/",
+            "icon": "json",
+            "epyTool": true,
+            "sdPath": "/apps/json/"
+        },
+        {
+            "id": "gvBcp2bB8kp5",
+            "name": "PDF Editor",
+            "description": "edit, redact, concat multiple pdfs",
+            "endpoint": "/pdf/",
+            "icon": "pdf",
+            "epyTool": true,
+            "sdPath": "/apps/pdf/"
+        },
+        {
+            "id": "fHy5CmkltBau",
+            "name": "EPY tools json",
+            "description": "",
+            "endpoint": "/dynamic/tools.json",
+            "icon": "file",
+            "epyTool": false,
+            "sdPath": ""
+        },
+        {
+            "id": "dnxxHxY3abi9",
+            "name": "EPY system stats",
+            "description": "",
+            "endpoint": "/dynamic/system-stats.json",
+            "icon": "firmware",
+            "epyTool": false,
+            "sdPath": ""
+        },
+        {
+            "id": "LL4mNKavmHck",
+            "name": "EPY system data",
+            "description": "",
+            "endpoint": "/data/system.json",
+            "icon": "file",
+            "epyTool": false,
+            "sdPath": ""
+        },
+        {
+            "id": "RqmcgWP8RQfF",
+            "name": "EPDify Home",
+            "description": "Local EPDify",
+            "endpoint": "http://192.168.68.135",
+            "icon": "success",
+            "epyTool": false,
+            "sdPath": ""
+        },
+        {
+            "id": "NLSdADcoJVzz",
+            "name": "DeepSeek AI",
+            "description": "DeepSeek AI application",
+            "endpoint": "/ai/ds/",
+            "icon": "ai",
+            "epyTool": true,
+            "sdPath": "/apps/ai/deepseek/"
+        },
+        {
+            "id": "WhlIFWvBqWAQ",
+            "name": "Setting json",
+            "description": "",
+            "endpoint": "/dynamic/setting.json",
+            "icon": "json",
+            "epyTool": false,
+            "sdPath": ""
+        }
+    ]
+}

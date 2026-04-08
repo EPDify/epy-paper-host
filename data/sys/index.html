@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPY Paper Host</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/battery.css">
+    <link rel="stylesheet" href="css/files.css">
+    <link rel="stylesheet" href="css/tools.css">
+    <link rel="stylesheet" href="css/vaults.css">
+    <style>
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-hidden {
+            display: none !important;
+        }
+
+        input[type="checkbox"].folder-check {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <aside class="sidebar">
+        <div class="brand">
+            <h2>EPY Paper Host</h2>
+        </div>
+        <nav class="nav">
+            <button class="nav-btn active" data-target="dashboard">
+                <span class="icon">📊</span> Dashboard
+            </button>
+            <button class="nav-btn" data-target="filemanager" id="btn-files">
+                <span class="icon">📁</span> Files
+            </button>
+            <button class="nav-btn" data-target="tools">
+                <span class="icon">🛠️</span> Tools
+            </button>
+            <button class="nav-btn" data-target="vaults">
+                <span class="icon">🔒</span> Vaults
+            </button>
+        </nav>
+
+        <div class="sidebar-footer">
+            <button class="nav-btn" id="btn-settings">
+                <span class="icon">⚙️</span> Settings
+            </button>
+            <div class="version-info" id="btn-version">
+                <span class="icon-badge">!</span>
+            </div>
+        </div>
+    </aside>
+
+    <main class="content">
+
+        <section id="dashboard" class="view active">
+            <header>
+                <h1>Dashboard</h1>
+            </header>
+            <div class="stats-grid">
+                <div class="card">
+                    <h3>Free Storage</h3>
+                    <p class="stat-value free-storage"></p>
+                </div>
+                <div class="card">
+                    <h3>Used Storage</h3>
+                    <p class="stat-value used-storage"></p>
+                </div>
+                <div class="card">
+                    <h3>Total Capacity</h3>
+                    <p class="stat-value total-capacity"></p>
+                </div>
+            </div>
+            <div class="stats-grid">
+                <div class="card">
+                    <h3>Temperature</h3>
+                    <p class="stat-value temperature"></p>
+                </div>
+                <div class="card">
+                    <h3>Humidity</h3>
+                    <p class="stat-value humidity"></p>
+                </div>
+                <div class="card">
+                    <h3>Battery Level</h3>
+                    <p class="stat-value battery-level"></p>
+                    <svg class="charging-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50">
+                        <rect class="battery-fill" x="5" y="5" width="0" height="40" rx="2" ry="2" />
+                        <g class="battery-shell">
+                            <rect x="2" y="2" width="88" height="46" rx="6" ry="6" />
+                            <path d="M92,15 v20 c3,0 6,-4 6,-10 c0,-6 -3,-10 -6,-10 z" fill="var(--battery-outline)"
+                                stroke="none" />
+                        </g>
+                        <path class="battery-bolt" d="M48 2 L36 26 L46 26 L42 48 L58 22 L48 22 Z" />
+                    </svg>
+                </div>
+            </div>
+        </section>
+
+        <section id="filemanager" class="view">
+            <header class="flex-header">
+                <h1>File Explorer</h1>
+                <div class="header-actions">
+                    <button class="btn btn-primary btn-hidden" id="btn-new-folder">➕ New Folder</button>
+                    <button class="btn btn-primary btn-hidden" id="btn-upload">⬆ Upload File</button>
+                    <button class="btn btn-danger btn-hidden" id="btn-delete-folder">🗑️ Delete Folder(s)</button>
+                    <button class="btn" id="btn-refresh">🔄 Refresh</button>
+                </div>
+            </header>
+
+            <div id="upload-area" class="upload-area hidden">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <span id="upload-status">Uploading...</span>
+            </div>
+
+            <input type="file" id="file-input" hidden multiple>
+
+            <div id="file-tree" class="file-tree">
+                <div class="loading">Loading files...</div>
+            </div>
+        </section>
+
+        <section id="tools" class="view">
+            <header>
+                <h1>Tools & Utilities</h1>
+            </header>
+        </section>
+
+        <section id="vaults" class="view">
+            <header>
+                <h1>Secure Vaults</h1>
+            </header>
+            <div id="vaults-container">
+            </div>
+        </section>
+
+    </main>
+
+    <div id="version-overlay" class="overlay hidden">
+        <div class="modal">
+            <h3>System Info</h3>
+            <p><strong>Firmware Version:</strong> <span id="fw-version" class="firmware">%FIRMWARE%</span></p>
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button class="btn btn-danger" id="btn-overlay-reboot">Reboot</button>
+                <button class="btn"
+                    onclick="document.getElementById('version-overlay').classList.add('hidden')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-overlay" class="overlay hidden">
+        <div class="modal" style="width: 380px;">
+            <h3>Device Settings</h3>
+            <div class="modal-form">
+                <div class="form-group checkbox-group" style="margin-bottom: 20px;">
+                    <input type="checkbox" id="setting-eco">
+                    <label for="setting-eco">Enable Eco Mode (vs Constant Mode)</label>
+                </div>
+                <div class="form-group checkbox-group" style="margin-bottom: 20px;">
+                    <input type="checkbox" id="setting-battery">
+                    <label for="setting-battery" title="change requires rebooting device to take effect">Battery
+                        Attached</label>
+                </div>
+                <div class="form-group">
+                    <label for="setting-interval">Screen Rotation Interval</label>
+                    <select id="setting-interval">
+                        <option value="1">1 min</option>
+                        <option value="2">2 mins</option>
+                        <option value="3">3 mins</option>
+                        <option value="5">5 mins</option>
+                        <option value="10">10 mins</option>
+                        <option value="30">30 mins</option>
+                        <option value="60">1 hour</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="setting-screen">Default Screen</label>
+                    <select id="setting-screen">
+                        <option>Loading...</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn" id="btn-settings-cancel">Cancel</button>
+                <button class="btn btn-primary" id="btn-settings-save">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirm-overlay" class="overlay hidden">
+        <div class="modal">
+            <h3>Confirmation</h3>
+            <p id="confirm-msg">Are you sure?</p>
+            <div class="modal-actions">
+                <button class="btn" id="btn-modal-cancel">Cancel</button>
+                <button class="btn btn-danger" id="btn-modal-confirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script src="js/files.js"></script>
+    <script src="js/tools.js"></script>
+    <script src="js/vaults.js"></script>
+</body>
+
+</html>

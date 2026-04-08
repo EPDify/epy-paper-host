@@ -1,0 +1,45 @@
+{
+    "icons": {
+        "pdf": "🗒️",
+        "json": "📋",
+        "text": "📄",
+        "word": "📝",
+        "excel": "📊",
+        "file": "📄",
+        "folder": "📁",
+        "ai": "🤖",
+        "image": "🖼️", 
+        "video": "🎥", 
+        "audio": "🎵", 
+        "number": "🔢",
+        "database": "🗄️",
+        "code": "💻",
+        "temperature": "🌡️",
+        "humidity": "💧",
+        "battery": "🔋",
+        "charging": "⚡",
+        "firmware": "📟",
+        "storage": "💾",
+        "clean": "🍳",
+        "used": "📉",
+        "free": "📈",
+        "not-charging": "❌",
+        "unknown": "❓",
+        "default": "🛠️",
+        "error": "⚠️",
+        "success": "✅"
+    },
+    "reserved": [
+        "/css",
+        "/js",
+        "/images",
+        "/tools",
+        "/system",
+        "/favicon.ico",
+        "/index.html"
+    ],
+    "epd_screens": [
+        "EVENT_DASHBOARD",
+        "EVENT_CONNECTED"
+    ]
+}

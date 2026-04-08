@@ -1,0 +1,10 @@
+{
+    "firmware": "v0.0.4",
+    "total-capacity": "59.46GB",
+    "used-storage": "2.35GB",
+    "free-stroage": "57.11GB",
+    "temperature": "27.3°C",
+    "humidity": "28%",
+    "battery-level": "80%",
+    "is-charging": "true"
+}
