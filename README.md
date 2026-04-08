@@ -2,6 +2,8 @@
 
 A web-based file manager and single-page application (SPA) server packed in a tiny **Waveshare ESP32-S3 1.54-inch e-Paper AIoT development board**. It's a portable, ultra-low-power, E-Paper Pocket Computer.
 
+![Waveshare ESP32-S3 1.54-inch e-Paper AIoT development board](https://github.com/zane-dev/epy-paper-host/blob/main/images/epy-paper-host.png) 
+
 ## 1. Prerequisites (Arduino CLI & esptool)
 
 This project uses `arduino-cli` to handle dependencies, compiling, and flashing, and `esptool` v5.x for reliable firmware uploads.
