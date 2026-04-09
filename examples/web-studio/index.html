@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Studio</title>
+    <link rel="stylesheet" href="main.css">
+    
+    <!-- Ace Editor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ace.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ext-language_tools.js"></script>
+    
+    <!-- Prettier Standalone & Plugins for Formatting -->
+    <script src="https://unpkg.com/prettier@3.0.3/standalone.js"></script>
+    <script src="https://unpkg.com/prettier@3.0.3/plugins/html.js"></script>
+    <script src="https://unpkg.com/prettier@3.0.3/plugins/estree.js"></script>
+    <script src="https://unpkg.com/prettier@3.0.3/plugins/babel.js"></script>
+    <script src="https://unpkg.com/prettier@3.0.3/plugins/postcss.js"></script>
+</head>
+
+<body>
+
+    <header>
+        <div class="logo-area">
+            <h1>Web Studio</h1>
+            <span class="file-type" id="file-type-badge">NONE</span>
+        </div>
+        <span id="status-badge" class="status-badge">Loaded</span>
+    </header>
+
+    <main>
+        <div id="drop-zone">
+            <div class="drop-icon">💻</div>
+            <div class="drop-text">Drag & drop a file here (.html, .css, .js, .json)<br>or click to browse from device</div>
+            <button class="primary" onclick="document.getElementById('file-input').click()">Select File</button>
+            <input type="file" id="file-input" accept=".html,.htm,.css,.js,.json">
+        </div>
+
+        <div id="editor-container">
+            <div class="editor-toolbar">
+                <div class="file-info" id="file-path-display">local_file.html</div>
+                <div class="btn-group">
+                    <button onclick="formatCode()" title="Format Code">Format</button>
+                    <button class="validate-btn" onclick="validateCode()" title="Check for errors">✓ Validate</button>
+                    <button onclick="downloadFile()" title="Download to local machine">⬇ Download</button>
+                    <button id="upload-btn" class="primary" onclick="uploadFile()" title="Save back to server">Upload</button>
+                </div>
+            </div>
+            
+            <div class="editor-wrapper">
+                <!-- Editor DOM element -->
+                <div id="ace-editor"></div>
+                
+                <div class="zoom-controls">
+                    <button class="zoom-btn" onclick="zoomIn()" title="Zoom In">+</button>
+                    <div class="zoom-label" id="zoom-label">100%</div>
+                    <button class="zoom-btn" onclick="zoomOut()" title="Zoom Out">−</button>
+                </div>
+            </div>
+            
+            <div id="error-bar"></div>
+        </div>
+    </main>
+
+    <div id="toast">Notification</div>
+
+    <script src="main.js"></script>
+</body>
+
+</html>
