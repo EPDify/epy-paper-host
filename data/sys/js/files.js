@@ -1,13 +1,12 @@
-// File Explorer State
 let selectedFolders = new Set();
 let allFilesData = [];
-let availableTools = []; 
+let availableTools = [];
 let currentFileContext = "";
 
 document.addEventListener("DOMContentLoaded", () => {
-    if(document.getElementById('file-tree')) {
+    if (document.getElementById('file-tree')) {
         setupFileActions();
-        if(document.querySelector('#filemanager.active')) {
+        if (document.querySelector('#filemanager.active')) {
             fetchFiles();
         }
     }
@@ -15,12 +14,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function setupFileActions() {
     const refreshBtn = document.getElementById('btn-refresh');
-    if(refreshBtn) refreshBtn.addEventListener('click', fetchFiles);
+    if (refreshBtn) refreshBtn.addEventListener('click', fetchFiles);
 
     const newFolderBtn = document.getElementById('btn-new-folder');
-    if(newFolderBtn) {
+    if (newFolderBtn) {
         newFolderBtn.addEventListener('click', () => {
-            if(selectedFolders.size !== 1) {
+            if (selectedFolders.size !== 1) {
                 alert("Please select exactly one parent folder.");
                 return;
             }
@@ -30,22 +29,22 @@ function setupFileActions() {
                 let path = parentPath + "/" + folderName;
                 path = path.replace("//", "/");
                 fetch('/system/mkdir?path=' + encodeURIComponent(path))
-                .then(res => {
-                    if (res.ok) {
-                        selectedFolders.clear();
-                        fetchFiles();
-                    } else alert("Failed to create folder");
-                })
-                .catch(err => alert("Connection Error"));
+                    .then(res => {
+                        if (res.ok) {
+                            selectedFolders.clear();
+                            fetchFiles();
+                        } else alert("Failed to create folder");
+                    })
+                    .catch(err => alert("Connection Error"));
             }
         });
     }
 
     // UPDATED: Upload Button opens overlay instead of direct input
     const uploadBtn = document.getElementById('btn-upload');
-    if(uploadBtn) {
+    if (uploadBtn) {
         uploadBtn.addEventListener('click', () => {
-            if(selectedFolders.size !== 1) {
+            if (selectedFolders.size !== 1) {
                 alert("Please select exactly one folder to upload to.");
                 return;
             }
@@ -54,22 +53,22 @@ function setupFileActions() {
     }
 
     const deleteFolderBtn = document.getElementById('btn-delete-folder');
-    if(deleteFolderBtn) {
+    if (deleteFolderBtn) {
         deleteFolderBtn.addEventListener('click', () => {
-            if(selectedFolders.size === 0) {
+            if (selectedFolders.size === 0) {
                 alert("No folders selected!");
                 return;
             }
             const count = selectedFolders.size;
-            const confirmFn = window.showConfirm || ((msg, cb) => { if(confirm(msg)) cb(); });
-            
+            const confirmFn = window.showConfirm || ((msg, cb) => { if (confirm(msg)) cb(); });
+
             confirmFn("Delete " + count + " selected folder(s) and ALL contents?", () => {
-                const promises = Array.from(selectedFolders).map(path => 
+                const promises = Array.from(selectedFolders).map(path =>
                     fetch('/system/file?name=' + encodeURIComponent(path), { method: 'DELETE' })
                 );
                 Promise.all(promises).then(() => {
-                    selectedFolders.clear(); 
-                    fetchFiles(); 
+                    selectedFolders.clear();
+                    fetchFiles();
                 }).catch(err => {
                     alert("Error deleting folders.");
                     fetchFiles();
@@ -106,23 +105,23 @@ function updateToolbar() {
 
 function fetchFiles() {
     const treeContainer = document.getElementById('file-tree');
-    if(treeContainer.innerHTML === "") {
+    if (treeContainer.innerHTML === "") {
         treeContainer.innerHTML = '<div class="loading">Loading files...</div>';
     }
-    
+
     selectedFolders.clear();
     updateToolbar();
 
     fetch('/system/listfiles')
-    .then(res => res.json())
-    .then(data => {
-        allFilesData = data;
-        renderTree(data);
-    })
-    .catch(err => {
-        console.error(err);
-        treeContainer.innerHTML = '<div style="color:#dc2626; padding:15px; text-align:center;">Failed to load.</div>';
-    });
+        .then(res => res.json())
+        .then(data => {
+            allFilesData = data;
+            renderTree(data);
+        })
+        .catch(err => {
+            console.error(err);
+            treeContainer.innerHTML = '<div style="color:#dc2626; padding:15px; text-align:center;">Failed to load.</div>';
+        });
 }
 
 // DnD Helpers
@@ -151,7 +150,7 @@ function updateFileListUI() {
 
 function openUploadOverlay() {
     const targetFolder = Array.from(selectedFolders)[0];
-    
+
     let overlay = document.getElementById('upload-overlay');
     if (!overlay) {
         overlay = document.createElement('div');
@@ -159,7 +158,7 @@ function openUploadOverlay() {
         overlay.className = 'overlay';
         document.body.appendChild(overlay);
     }
-    
+
     // Updated HTML structure for Multi-file & DnD
     overlay.innerHTML = `
         <div class="modal" style="width: 450px;">
@@ -203,10 +202,10 @@ function openUploadOverlay() {
             </div>
         </div>
     `;
-    
+
     // Add Drag & Drop Event Listeners
     const dropArea = document.getElementById('drop-area');
-    
+
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         dropArea.addEventListener(eventName, preventDefaults, false);
     });
@@ -226,11 +225,11 @@ function openUploadOverlay() {
 }
 
 // Global scope needed for onclick handlers in HTML string
-window.switchUploadTab = function(mode) {
+window.switchUploadTab = function (mode) {
     const tabFile = document.getElementById('tab-file');
     const tabPaste = document.getElementById('tab-paste');
     const btns = document.querySelectorAll('.tab-btn');
-    
+
     if (mode === 'file') {
         tabFile.classList.remove('hidden');
         tabPaste.classList.add('hidden');
@@ -244,7 +243,7 @@ window.switchUploadTab = function(mode) {
     }
 };
 
-window.closeUploadOverlay = function() {
+window.closeUploadOverlay = function () {
     const overlay = document.getElementById('upload-overlay');
     if (overlay) {
         overlay.classList.add('hidden');
@@ -257,14 +256,14 @@ function uploadFileWithProgress(file, folder, onProgress) {
     return new Promise((resolve, reject) => {
         const formData = new FormData();
         formData.append("file", file);
-        
+
         const xhr = new XMLHttpRequest();
         xhr.open("POST", "/system/upload?folder=" + encodeURIComponent(folder));
-        
+
         xhr.upload.addEventListener("progress", (e) => {
             if (e.lengthComputable) {
                 const percent = (e.loaded / e.total) * 100;
-                if(onProgress) onProgress(percent);
+                if (onProgress) onProgress(percent);
             }
         });
 
@@ -272,18 +271,18 @@ function uploadFileWithProgress(file, folder, onProgress) {
             if (xhr.status === 200) resolve();
             else reject("Server Error: " + xhr.status);
         };
-        
+
         xhr.onerror = () => reject("Network Error");
         xhr.send(formData);
     });
 }
 
 // UPDATED: Handle Multiple Files + Progress display
-window.performOverlayUpload = async function(folder) {
+window.performOverlayUpload = async function (folder) {
     const isFileMode = !document.getElementById('tab-file').classList.contains('hidden');
     const progressContainer = document.getElementById('upload-progress-container');
     const msgDiv = document.getElementById('upload-msg');
-    
+
     progressContainer.innerHTML = ''; // Clear previous progress
     msgDiv.innerText = '';
     msgDiv.className = 'upload-msg';
@@ -303,7 +302,7 @@ window.performOverlayUpload = async function(folder) {
         // Process files sequentially (or parallel if preferred, sequential is safer for ESP32)
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
-            
+
             // Create Progress UI Item
             const progressItem = document.createElement('div');
             progressItem.className = 'upload-progress-item';
@@ -327,7 +326,7 @@ window.performOverlayUpload = async function(folder) {
                     fill.style.width = percent + "%";
                     pct.innerText = Math.round(percent) + "%";
                 });
-                
+
                 pct.innerText = "✓";
                 pct.style.color = "var(--charging-color)"; // Green
             } catch (err) {
@@ -337,13 +336,13 @@ window.performOverlayUpload = async function(folder) {
                 console.error(err);
             }
         }
-        
+
         if (failCount === 0) {
-             msgDiv.innerText = "All uploads complete!";
-             setTimeout(() => {
+            msgDiv.innerText = "All uploads complete!";
+            setTimeout(() => {
                 closeUploadOverlay();
                 fetchFiles();
-             }, 1000);
+            }, 1000);
         } else {
             msgDiv.innerText = `Completed with ${failCount} errors.`;
             msgDiv.className = "upload-msg error";
@@ -353,15 +352,15 @@ window.performOverlayUpload = async function(folder) {
         // Paste Mode (Single file logic preserved)
         const name = document.getElementById('paste-filename').value.trim();
         const content = document.getElementById('paste-content').value;
-        
+
         if (!name) {
             msgDiv.innerText = "Filename is required.";
             msgDiv.className = "upload-msg error";
             return;
         }
-        
+
         const fileToUpload = new File([content], name, { type: "text/plain" });
-        
+
         // UI for single paste upload
         const progressItem = document.createElement('div');
         progressItem.className = 'upload-progress-item';
@@ -370,14 +369,14 @@ window.performOverlayUpload = async function(folder) {
             <div class="progress-bar-sm"><div class="progress-fill-sm" style="width:0%"></div></div>
         `;
         progressContainer.appendChild(progressItem);
-        
+
         const fill = progressItem.querySelector('.progress-fill-sm');
-        
+
         try {
             await uploadFileWithProgress(fileToUpload, folder, (p) => fill.style.width = p + "%");
             closeUploadOverlay();
             fetchFiles();
-        } catch(err) {
+        } catch (err) {
             msgDiv.innerText = "Upload Failed: " + err;
             msgDiv.className = "upload-msg error";
         }
@@ -394,15 +393,15 @@ function buildTreeStructure(files) {
         let cleanPath = file.name;
         if (cleanPath.startsWith("/sdcard/")) cleanPath = cleanPath.substring(8);
         else if (cleanPath.startsWith("/")) cleanPath = cleanPath.substring(1);
-        
+
         const parts = cleanPath.split('/').filter(p => p.length > 0);
-        
+
         let currentLevel = root;
         let builtPath = "/sdcard";
 
         parts.forEach((part, index) => {
             builtPath += "/" + part;
-            
+
             if (!currentLevel.children[part]) {
                 currentLevel.children[part] = {
                     name: part,
@@ -412,7 +411,7 @@ function buildTreeStructure(files) {
                     size: 0
                 };
             }
-            
+
             if (index === parts.length - 1) {
                 currentLevel.children[part].isDir = file.isDir;
                 currentLevel.children[part].size = file.size;
@@ -434,7 +433,7 @@ function renderTree(files) {
 function renderTreeRecursive(node, container, depth) {
     const nodeEl = document.createElement('div');
     nodeEl.className = 'tree-node';
-    
+
     const header = document.createElement('div');
     header.className = 'tree-header';
     header.style.paddingLeft = (depth * 20) + "px";
@@ -442,7 +441,7 @@ function renderTreeRecursive(node, container, depth) {
     // 1. Toggle Icon
     const toggleIcon = document.createElement('span');
     toggleIcon.className = 'toggle-icon';
-    toggleIcon.innerText = node.isDir ? '▶' : ' '; 
+    toggleIcon.innerText = node.isDir ? '▶' : ' ';
     header.appendChild(toggleIcon);
 
     // 2. Icon + Name
@@ -474,15 +473,15 @@ function renderTreeRecursive(node, container, depth) {
 
     if (node.isDir) {
         controls.appendChild(createCopyBtn());
-        
+
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.className = 'folder-check';
         if (selectedFolders.has(node.path)) checkbox.checked = true;
-        
+
         checkbox.onclick = (e) => {
             e.stopPropagation();
-            if(checkbox.checked) selectedFolders.add(node.path);
+            if (checkbox.checked) selectedFolders.add(node.path);
             else selectedFolders.delete(node.path);
             updateToolbar();
         };
@@ -500,12 +499,12 @@ function renderTreeRecursive(node, container, depth) {
         openBtn.className = 'btn-icon';
         openBtn.innerText = '↗';
         openBtn.title = 'Open / Actions';
-        openBtn.onclick = (e) => { 
-            e.stopPropagation(); 
-            openFileActionOverlay(node.path); 
+        openBtn.onclick = (e) => {
+            e.stopPropagation();
+            openFileActionOverlay(node.path);
         };
         controls.appendChild(openBtn);
-        
+
         const delBtn = document.createElement('button');
         delBtn.className = 'btn-icon danger';
         delBtn.innerText = '🗑️';
@@ -520,13 +519,13 @@ function renderTreeRecursive(node, container, depth) {
     // 4. Children
     const childrenContainer = document.createElement('div');
     childrenContainer.className = 'tree-children hidden';
-    
+
     if (node.isDir) {
-        const childrenKeys = Object.keys(node.children).sort((a,b) => {
+        const childrenKeys = Object.keys(node.children).sort((a, b) => {
             const nodeA = node.children[a];
             const nodeB = node.children[b];
-            if(nodeA.isDir && !nodeB.isDir) return -1;
-            if(!nodeA.isDir && nodeB.isDir) return 1;
+            if (nodeA.isDir && !nodeB.isDir) return -1;
+            if (!nodeA.isDir && nodeB.isDir) return 1;
             return a.localeCompare(b);
         });
 
@@ -542,7 +541,7 @@ function renderTreeRecursive(node, container, depth) {
 
         header.addEventListener('click', (e) => {
             if (['INPUT', 'BUTTON', 'SELECT', 'OPTION'].includes(e.target.tagName)) return;
-            
+
             const isClosed = childrenContainer.classList.contains('hidden');
             if (isClosed) {
                 childrenContainer.classList.remove('hidden');
@@ -573,10 +572,10 @@ function openFileActionOverlay(path) {
         overlay.className = 'overlay';
         document.body.appendChild(overlay);
     }
-    
-    overlay.className = 'overlay'; 
+
+    overlay.className = 'overlay';
     overlay.style.display = 'flex';
-    
+
     overlay.innerHTML = `
         <div class="modal" style="width: 380px;">
             <h3>${filename}</h3>
@@ -588,32 +587,32 @@ function openFileActionOverlay(path) {
     `;
 
     fetch('/dynamic/tools.json')
-    .then(res => res.json())
-    .then(data => {
-        availableTools = data.tools || [];
-        renderFileOverlayContent(filename);
-    })
-    .catch(err => {
-        console.error("Failed to load tools", err);
-        availableTools = [];
-        renderFileOverlayContent(filename);
-    });
+        .then(res => res.json())
+        .then(data => {
+            availableTools = data.tools || [];
+            renderFileOverlayContent(filename);
+        })
+        .catch(err => {
+            console.error("Failed to load tools", err);
+            availableTools = [];
+            renderFileOverlayContent(filename);
+        });
 }
 
 function renderFileOverlayContent(filename) {
     const overlay = document.getElementById('file-action-overlay');
-    if(!overlay) return;
+    if (!overlay) return;
 
     const epyEditors = availableTools.filter(t => t.epyTool === true && t.isEditor === true);
     const currentExt = filename.split('.').pop().toLowerCase();
-    
+
     let toolsHtml = '';
     if (epyEditors.length > 0) {
         let bestMatch = epyEditors.find(t => t.extensions && t.extensions.split(',').map(e => e.trim().toLowerCase()).includes(currentExt));
         if (!bestMatch) bestMatch = epyEditors[0];
-        
+
         const selectedEndpoint = bestMatch.endpoint;
-        
+
         let options = epyEditors.map(t => {
             const isSelected = t.endpoint === selectedEndpoint ? 'selected' : '';
             return `<option value="${t.endpoint}" ${isSelected}>${t.name}</option>`;
@@ -647,20 +646,20 @@ function renderFileOverlayContent(filename) {
             </div>
         </div>
     `;
-    
+
     overlay.innerHTML = modalContent;
 }
 
 function launchFileTool() {
     const select = document.getElementById('file-tool-select');
     if (!select) return;
-    
+
     const endpoint = select.value;
     if (!endpoint) return;
 
     const separator = endpoint.includes('?') ? '&' : '?';
     const url = `${endpoint}${separator}filePath=${encodeURIComponent(currentFileContext)}`;
-    
+
     window.open(url, '_blank');
     closeFileOverlay();
 }
@@ -702,7 +701,7 @@ function copyToClipboard(fullPath, isDir) {
 function fallbackCopyTextToClipboard(text) {
     const textArea = document.createElement("textarea");
     textArea.value = text;
-    textArea.style.position = "fixed"; 
+    textArea.style.position = "fixed";
     textArea.style.left = "-9999px";
     textArea.style.top = "0";
     document.body.appendChild(textArea);
@@ -711,7 +710,7 @@ function fallbackCopyTextToClipboard(text) {
 
     try {
         const successful = document.execCommand('copy');
-        if(successful) showToast("Copied: " + text);
+        if (successful) showToast("Copied: " + text);
         else alert("Copy failed. Path: " + text);
     } catch (err) {
         console.error('Fallback copy error', err);
@@ -747,15 +746,15 @@ function uploadSingleFile(fileObj, folder) {
     return new Promise((resolve, reject) => {
         const formData = new FormData();
         formData.append("file", fileObj);
-        
+
         const xhr = new XMLHttpRequest();
         xhr.open("POST", "/system/upload?folder=" + encodeURIComponent(folder));
-        
+
         xhr.onload = () => {
             if (xhr.status === 200) resolve();
             else reject("Server Error: " + xhr.status);
         };
-        
+
         xhr.onerror = () => reject("Network Error");
         xhr.send(formData);
     });
@@ -766,15 +765,15 @@ function downloadFile(path) {
 }
 
 function deleteFile(path) {
-    const confirmFn = window.showConfirm || ((msg, cb) => { if(confirm(msg)) cb(); });
-    
+    const confirmFn = window.showConfirm || ((msg, cb) => { if (confirm(msg)) cb(); });
+
     confirmFn("Delete file " + path + "?", () => {
         fetch('/system/file?name=' + encodeURIComponent(path), { method: 'DELETE' })
-        .then(res => {
-            if(res.ok) fetchFiles();
-            else alert("Failed to delete.");
-        })
-        .catch(err => alert("Connection Failed"));
+            .then(res => {
+                if (res.ok) fetchFiles();
+                else alert("Failed to delete.");
+            })
+            .catch(err => alert("Connection Failed"));
     });
 }
 
