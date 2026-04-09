@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web IPTV Player (Pro Version)</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --sidebar-bg: #1e1e1e;
+            --text-color: #ffffff;
+            --accent-color: #007bff;
+            --hover-color: #2a2a2a;
+            --working-color: #4CAF50;
+            --broken-color: #888888;
+            --danger-color: #dc3545;
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Sidebar Styles */
+        #sidebar {
+            width: 340px;
+            background-color: var(--sidebar-bg);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #333;
+        }
+
+        #sidebar-header {
+            padding: 20px;
+            background-color: #1a1a1a;
+            border-bottom: 1px solid #333;
+            text-align: center;
+        }
+
+        #sidebar-header h2 {
+            margin: 0 0 10px 0;
+            font-size: 1.2rem;
+        }
+
+        .header-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        #scan-btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        #scan-btn:hover {
+            background-color: #0056b3;
+        }
+
+        #scan-btn:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+
+        #scan-progress {
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+
+        #search-box {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            background: #333;
+            border: none;
+            color: white;
+            border-radius: 4px;
+        }
+
+        #channel-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .channel-item {
+            padding: 12px 20px;
+            border-bottom: 1px solid #2a2a2a;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .channel-info {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex-grow: 1;
+        }
+
+        .channel-item:hover,
+        .channel-item.active {
+            background-color: var(--hover-color);
+            border-left: 4px solid var(--accent-color);
+            padding-left: 16px;
+        }
+
+        /* Status & Save Button */
+        .controls-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .status-dot {
+            height: 10px;
+            width: 10px;
+            border-radius: 50%;
+            background-color: #555;
+        }
+
+        .save-btn {
+            display: none;
+            background: #28a745;
+            border: none;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+
+        .save-btn:hover {
+            background: #218838;
+        }
+
+        .channel-item.working .status-dot {
+            background-color: var(--working-color);
+            box-shadow: 0 0 5px var(--working-color);
+        }
+
+        .channel-item.working .save-btn {
+            display: block;
+        }
+
+        /* Only show Save button if working */
+
+        .channel-item.broken {
+            opacity: 0.5;
+        }
+
+        .channel-item.broken .channel-info {
+            text-decoration: line-through;
+        }
+
+        .channel-item.broken .status-dot {
+            background-color: var(--broken-color);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--sidebar-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #777;
+        }
+
+        /* Main Player Styles */
+        #main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            background-color: #000;
+            overflow-y: auto;
+        }
+
+        /* Favourites Section */
+        #favourites-container {
+            margin-bottom: 20px;
+            display: none;
+            /* Hidden if empty */
+            flex-direction: column;
+        }
+
+        #favourites-container h3 {
+            margin: 0 0 10px 0;
+            font-size: 1rem;
+            color: #ccc;
+        }
+
+        #favourites-list {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .fav-item {
+            background: #222;
+            border: 1px solid #444;
+            padding: 8px 15px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.2s;
+        }
+
+        .fav-item:hover {
+            background: #333;
+        }
+
+        .fav-remove-btn {
+            background: var(--danger-color);
+            border: none;
+            color: white;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+
+        .fav-remove-btn:hover {
+            background: #c82333;
+        }
+
+        #video-container {
+            width: 100%;
+            max-width: 1200px;
+            aspect-ratio: 16 / 9;
+            margin: 0 auto;
+            background: #0a0a0a;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            outline: none;
+        }
+
+        #status-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #888;
+            font-size: 1.2rem;
+            pointer-events: none;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="sidebar">
+        <div id="sidebar-header">
+            <h2>Free-TV IPTV</h2>
+            <div class="header-controls">
+                <span id="scan-progress">Ready</span>
+                <button id="scan-btn" onclick="startManualScan()">Scan Now</button>
+            </div>
+            <input type="text" id="search-box" placeholder="Search channels..." onkeyup="filterChannels()">
+        </div>
+        <ul id="channel-list">
+            <li class="channel-item" style="text-align:center; pointer-events:none;">Loading...</li>
+        </ul>
+    </div>
+
+    <div id="main-content">
+        <div id="favourites-container">
+            <h3>⭐ Favourites</h3>
+            <div id="favourites-list">
+            </div>
+        </div>
+
+        <div id="video-container">
+            <div id="status-message">Select a channel to start playing</div>
+            <video id="video-player" controls autoplay></video>
+        </div>
+        <h3 id="now-playing" style="margin-top: 20px; color: #aaa; text-align: center;"></h3>
+    </div>
+
+    <script>
+        const PLAYLIST_URL = 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8';
+        const FOLDER_PATH = '/sdcard/storage/iptv/';
+
+        const channelListElement = document.getElementById('channel-list');
+        const favouritesContainer = document.getElementById('favourites-container');
+        const favouritesList = document.getElementById('favourites-list');
+        const videoElement = document.getElementById('video-player');
+        const statusMessage = document.getElementById('status-message');
+        const nowPlayingText = document.getElementById('now-playing');
+        const scanProgressText = document.getElementById('scan-progress');
+        const scanBtn = document.getElementById('scan-btn');
+
+        let allChannels = [];
+        let savedChannels = { saving: [] };
+        let hlsPlayer = null;
+        let isScanning = false;
+
+        // --- API Helpers ---
+        async function fetchLocalJson(filename) {
+            try {
+                const response = await fetch(`/system/file?name=${FOLDER_PATH}${filename}`);
+                if (response.ok) return await response.json();
+            } catch (e) { console.warn(`Could not load ${filename}, returning null.`); }
+            return null;
+        }
+
+        async function uploadLocalJson(filename, dataObj) {
+            try {
+                const blob = new Blob([JSON.stringify(dataObj, null, 2)], { type: 'application/json' });
+                const formData = new FormData();
+                formData.append('file', blob, filename);
+
+                await fetch(`/system/upload?folder=${FOLDER_PATH}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                console.log(`Successfully uploaded ${filename}`);
+            } catch (e) {
+                console.error(`Failed to upload ${filename}`, e);
+            }
+        }
+
+        // --- Initialization ---
+        async function init() {
+            try {
+                // 1. Fetch Playlist
+                const response = await fetch(PLAYLIST_URL);
+                if (!response.ok) throw new Error("Network response was not ok");
+                allChannels = parseM3U(await response.text());
+
+                // 2. Fetch Working Channels Cache
+                const workingData = await fetchLocalJson('working.json');
+                const workingUrls = Array.isArray(workingData) ? workingData : [];
+
+                let hasCache = false;
+                if (workingUrls.length > 0) {
+                    hasCache = true;
+                    // Apply working status and sort them to the top
+                    allChannels.forEach(c => {
+                        if (workingUrls.includes(c.url)) c.status = 'working';
+                    });
+                    allChannels.sort((a, b) => (a.status === 'working' ? -1 : 1) - (b.status === 'working' ? -1 : 1));
+                }
+
+                // 3. Fetch Saved (Favourites) Channels
+                const savingData = await fetchLocalJson('saving.json');
+                if (savingData && Array.isArray(savingData.saving)) {
+                    savedChannels = savingData;
+                }
+
+                // 4. Render UI
+                renderChannels(allChannels);
+                renderFavourites();
+
+                // 5. Decide whether to auto-scan
+                if (!hasCache) {
+                    startManualScan();
+                } else {
+                    scanProgressText.textContent = `Loaded ${workingUrls.length} working`;
+                }
+
+            } catch (error) {
+                console.error('Error init:', error);
+                channelListElement.innerHTML = `<li class="channel-item" style="color:red; pointer-events:none;">Failed to load data.</li>`;
+            }
+        }
+
+        function parseM3U(data) {
+            const lines = data.split('\n');
+            const channels = [];
+            let currentChannel = { name: '', url: '', id: 0 };
+            let idCounter = 0;
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                if (line.startsWith('#EXTINF:')) {
+                    const splitByComma = line.split(',');
+                    currentChannel.name = splitByComma[splitByComma.length - 1].trim();
+                } else if (!line.startsWith('#')) {
+                    currentChannel.url = line;
+                    currentChannel.id = idCounter++;
+                    channels.push(currentChannel);
+                    currentChannel = { name: '', url: '', id: 0 };
+                }
+            }
+            return channels;
+        }
+
+        // --- UI Rendering ---
+        function renderChannels(channels) {
+            channelListElement.innerHTML = '';
+            if (channels.length === 0) {
+                channelListElement.innerHTML = `<li class="channel-item">No channels found.</li>`;
+                return;
+            }
+
+            channels.forEach((channel) => {
+                const li = document.createElement('li');
+                li.className = 'channel-item';
+                li.id = `channel-${channel.id}`;
+
+                if (channel.status === 'working') li.classList.add('working');
+                if (channel.status === 'broken') li.classList.add('broken');
+
+                li.innerHTML = `
+                    <span class="channel-info" onclick="playChannelById(${channel.id})">${channel.name || 'Unknown'}</span>
+                    <div class="controls-container">
+                        <button class="save-btn" onclick="saveChannel(${channel.id}, event)">Save</button>
+                        <span class="status-dot"></span>
+                    </div>
+                `;
+                channelListElement.appendChild(li);
+            });
+        }
+
+        function renderFavourites() {
+            favouritesList.innerHTML = '';
+
+            if (savedChannels.saving.length === 0) {
+                favouritesContainer.style.display = 'none';
+                return;
+            }
+
+            favouritesContainer.style.display = 'flex';
+            savedChannels.saving.forEach(channel => {
+                const div = document.createElement('div');
+                div.className = 'fav-item';
+                div.innerHTML = `
+                    <span onclick="playChannelByUrl('${channel.url}', '${channel.name}')">${channel.name}</span>
+                    <button class="fav-remove-btn" onclick="removeChannel('${channel.url}', event)">✕</button>
+                `;
+                favouritesList.appendChild(div);
+            });
+        }
+
+        // --- Favourites Logic ---
+        async function saveChannel(id, event) {
+            event.stopPropagation(); // Prevent playing the video when clicking save
+            const channel = allChannels.find(c => c.id === id);
+
+            // Avoid duplicates
+            if (!savedChannels.saving.some(c => c.url === channel.url)) {
+                savedChannels.saving.push({ name: channel.name, url: channel.url });
+                renderFavourites();
+                await uploadLocalJson('saving.json', savedChannels);
+            }
+        }
+
+        async function removeChannel(url, event) {
+            event.stopPropagation();
+            savedChannels.saving = savedChannels.saving.filter(c => c.url !== url);
+            renderFavourites();
+            await uploadLocalJson('saving.json', savedChannels);
+        }
+
+        // --- Scanning Logic ---
+        function startManualScan() {
+            if (isScanning) return;
+            // Reset all channels for a fresh scan
+            allChannels.forEach(c => c.status = undefined);
+            renderChannels(allChannels);
+            lazyCheckChannels();
+        }
+
+        async function lazyCheckChannels() {
+            isScanning = true;
+            scanBtn.disabled = true;
+            scanBtn.textContent = "Scanning...";
+
+            const CONCURRENCY_LIMIT = 5;
+            const scanQueue = [...allChannels];
+            let channelsChecked = 0;
+            let workingCount = 0;
+
+            async function worker() {
+                while (scanQueue.length > 0) {
+                    const channel = scanQueue.shift();
+
+                    try {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 5000);
+                        const response = await fetch(channel.url, { method: 'GET', signal: controller.signal });
+                        clearTimeout(timeoutId);
+
+                        if (response.ok) {
+                            channel.status = 'working';
+
+                            // Reorder master array
+                            const currentIndex = allChannels.findIndex(c => c.id === channel.id);
+                            if (currentIndex > -1) {
+                                allChannels.splice(currentIndex, 1);
+                                allChannels.splice(workingCount, 0, channel);
+                            }
+
+                            // Update UI instantly
+                            const isSearching = document.getElementById('search-box').value.length > 0;
+                            const li = document.getElementById(`channel-${channel.id}`);
+                            if (li) {
+                                li.classList.add('working');
+                                if (!isSearching) {
+                                    channelListElement.insertBefore(li, channelListElement.children[workingCount]);
+                                }
+                            }
+                            workingCount++;
+                        } else { throw new Error('Bad status'); }
+                    } catch (error) {
+                        channel.status = 'broken';
+                        const li = document.getElementById(`channel-${channel.id}`);
+                        if (li) li.classList.add('broken');
+                    }
+
+                    channelsChecked++;
+                    scanProgressText.textContent = `Scanned: ${channelsChecked}/${allChannels.length}`;
+                }
+            }
+
+            const workers = [];
+            for (let i = 0; i < CONCURRENCY_LIMIT; i++) workers.push(worker());
+            await Promise.all(workers);
+
+            // Scan Complete - Save to working.json
+            scanProgressText.textContent = `Found ${workingCount} working`;
+            scanBtn.disabled = false;
+            scanBtn.textContent = "Scan Now";
+            isScanning = false;
+
+            const workingUrls = allChannels.filter(c => c.status === 'working').map(c => c.url);
+            await uploadLocalJson('working.json', workingUrls);
+        }
+
+        // --- Video Playback ---
+        function playChannelById(id) {
+            const channel = allChannels.find(c => c.id === id);
+            if (channel) playStream(channel.url, channel.name, channel.status);
+        }
+
+        function playChannelByUrl(url, name) {
+            playStream(url, name, 'working'); // Favourites are assumed working
+        }
+
+        function playStream(url, name, status) {
+            if (status === 'broken') {
+                if (!confirm("This stream appears broken. Attempt to play anyway?")) return;
+            }
+
+            statusMessage.style.display = 'none';
+            nowPlayingText.textContent = `Now Playing: ${name}`;
+
+            if (Hls.isSupported()) {
+                if (hlsPlayer) hlsPlayer.destroy();
+                hlsPlayer = new Hls();
+                hlsPlayer.loadSource(url);
+                hlsPlayer.attachMedia(videoElement);
+                hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
+                    videoElement.play().catch(e => console.warn("Autoplay blocked:", e));
+                });
+                hlsPlayer.on(Hls.Events.ERROR, (event, data) => {
+                    if (data.fatal) nowPlayingText.textContent = `Error: Stream offline or CORS blocked`;
+                });
+            } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+                videoElement.src = url;
+                videoElement.play().catch(e => console.warn("Autoplay blocked:", e));
+            }
+        }
+
+        // --- Search ---
+        function filterChannels() {
+            const query = document.getElementById('search-box').value.toLowerCase();
+            const filtered = allChannels.filter(channel =>
+                channel.name.toLowerCase().includes(query)
+            );
+            renderChannels(filtered);
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

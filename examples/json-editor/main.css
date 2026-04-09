@@ -1,0 +1,318 @@
+:root {
+    --bg-color: #f9f9fb;
+    --card-bg: #ffffff;
+    --text-primary: #1a1a1a;
+    --text-secondary: #666;
+    --accent: #2d3436;
+    --accent-hover: #000;
+    --border: #e1e4e8;
+    --error: #d93025;
+    --success: #1e8e3e;
+    --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --editor-font-size: 14px;
+}
+
+* {
+    box-sizing: border-box;
+    outline: none;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-sans);
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* --- Header --- */
+header {
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-color);
+    border-bottom: 1px solid transparent;
+}
+
+h1 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 99px;
+    background: #eee;
+    color: #555;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+/* --- Main Layout --- */
+main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem 2rem 2rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+/* --- Drag & Drop Zone --- */
+#drop-zone {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    background: var(--card-bg);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    text-align: center;
+    padding: 2rem;
+}
+
+#drop-zone:hover,
+#drop-zone.drag-over {
+    border-color: var(--accent);
+    background: #fafafa;
+}
+
+.drop-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    color: var(--text-secondary);
+}
+
+.drop-text {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+}
+
+/* --- Editor Area --- */
+#editor-container {
+    display: none;
+    flex: 1;
+    flex-direction: column;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+}
+
+.editor-toolbar {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+}
+
+.file-info {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+/* --- Line-Numbered Editor --- */
+.editor-wrapper {
+    display: flex;
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+.line-numbers {
+    width: 50px;
+    padding: 1.5rem 0.5rem 1.5rem 0;
+    background: #f6f8fa;
+    border-right: 1px solid var(--border);
+    text-align: right;
+    font-family: var(--font-mono);
+    font-size: var(--editor-font-size);
+    line-height: 1.6;
+    color: #b0b0b0;
+    user-select: none;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.line-numbers div {
+    padding-right: 0.5rem;
+}
+
+textarea {
+    flex: 1;
+    width: 100%;
+    border: none;
+    padding: 1.5rem;
+    resize: none;
+    font-family: var(--font-mono);
+    font-size: var(--editor-font-size);
+    line-height: 1.6;
+    color: var(--text-primary);
+    background: var(--card-bg);
+}
+
+textarea::selection {
+    background: #e0e0e0;
+}
+
+/* --- Zoom Controls --- */
+.zoom-controls {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 10;
+}
+
+.zoom-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.zoom-btn:hover {
+    background: #f0f0f0;
+    color: var(--text-primary);
+}
+
+.zoom-label {
+    text-align: center;
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* --- Error Bar --- */
+#error-bar {
+    display: none;
+    padding: 0.6rem 1rem;
+    background: #fef2f2;
+    border-top: 1px solid #fecaca;
+    color: var(--error);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+#error-bar.visible {
+    display: block;
+}
+
+#error-bar.success-bar {
+    background: #f0fdf4;
+    border-top-color: #bbf7d0;
+    color: var(--success);
+}
+
+/* --- Buttons --- */
+.btn-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+button {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid var(--border);
+    background: white;
+    color: var(--text-primary);
+}
+
+button:hover {
+    background: #f4f4f4;
+}
+
+button.primary {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+button.primary:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+}
+
+button.validate-btn {
+    background: #eef6ee;
+    color: var(--success);
+    border-color: #c6e7c6;
+}
+
+button.validate-btn:hover {
+    background: #daf0da;
+}
+
+input[type="file"] {
+    display: none;
+}
+
+/* --- Notifications --- */
+#toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--accent);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    transform: translateY(150%);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+}
+
+#toast.show {
+    transform: translateY(0);
+}
+
+#toast.error {
+    background: var(--error);
+}
+
+#toast.success {
+    background: var(--success);
+}
