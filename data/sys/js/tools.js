@@ -14,7 +14,7 @@ let showEpyOnly = false;      // Filter state
 
 function initToolsManager() {
     const toolsHeader = document.querySelector('#tools header');
-    
+
     // 1. Inject Header Actions Container (Edit & Cancel Buttons)
     if (toolsHeader && !document.getElementById('tools-header-actions')) {
         toolsHeader.style.display = 'flex';
@@ -64,22 +64,22 @@ function loadData() {
         fetch('/dynamic/tools.json').then(res => res.json()),
         fetch('/data/system.json').then(res => res.json())
     ])
-    .then(([tools, system]) => {
-        toolsData = tools;
-        systemData = system;
-        renderStatsAndFilter();
-        renderTools();
-    })
-    .catch(err => {
-        console.error(err);
-        grid.innerHTML = '<div class="error-msg">Failed to load configuration files.</div>';
-    });
+        .then(([tools, system]) => {
+            toolsData = tools;
+            systemData = system;
+            renderStatsAndFilter();
+            renderTools();
+        })
+        .catch(err => {
+            console.error(err);
+            grid.innerHTML = '<div class="error-msg">Failed to load configuration files.</div>';
+        });
 }
 
 function renderStatsAndFilter() {
     let container = document.getElementById('tool-stats-container');
     const toolsHeader = document.querySelector('#tools header');
-    
+
     if (!container && toolsHeader) {
         container = document.createElement('div');
         container.id = 'tool-stats-container';
@@ -123,8 +123,8 @@ function toggleEditMode() {
         // ENTERING EDIT MODE
         isEditMode = true;
         // Deep copy to backup current state
-        originalToolsData = JSON.parse(JSON.stringify(toolsData.tools)); 
-        
+        originalToolsData = JSON.parse(JSON.stringify(toolsData.tools));
+
         editBtn.innerText = 'Save';
         editBtn.classList.add('btn-primary');
         cancelBtn.classList.remove('hidden');
@@ -132,11 +132,11 @@ function toggleEditMode() {
         // SAVING AND EXITING
         isEditMode = false;
         originalToolsData = null; // Clear backup
-        
+
         editBtn.innerText = 'Edit';
         editBtn.classList.remove('btn-primary');
         cancelBtn.classList.add('hidden');
-        
+
         saveToolsToServer();
     }
     renderTools();
@@ -149,7 +149,7 @@ function cancelEditMode() {
     // RESTORING BACKUP
     isEditMode = false;
     if (originalToolsData) {
-        toolsData.tools = originalToolsData; 
+        toolsData.tools = originalToolsData;
     }
     originalToolsData = null;
 
@@ -172,7 +172,7 @@ function renderTools() {
 
         const card = document.createElement(isEditMode ? 'div' : 'a');
         card.className = 'tool-card';
-        
+
         if (tool.epyTool) {
             card.classList.add('epy');
             const badge = document.createElement('div');
@@ -185,7 +185,7 @@ function renderTools() {
 
         if (!isEditMode) {
             card.href = tool.endpoint;
-            card.target = "_blank"; 
+            card.target = "_blank";
         } else {
             card.onclick = () => openEditOverlay(index);
             const delBtn = document.createElement('div');
@@ -200,23 +200,23 @@ function renderTools() {
         }
 
         const iconChar = systemData.icons[tool.icon] || tool.icon || systemData.icons['default'] || "🛠️";
-        
+
         const iconSpan = document.createElement('span');
         iconSpan.className = 'tool-icon';
         iconSpan.innerText = iconChar;
 
         const infoDiv = document.createElement('div');
         infoDiv.className = 'tool-info';
-        
+
         const title = document.createElement('strong');
         title.innerText = tool.name;
-        
+
         const desc = document.createElement('small');
         desc.innerText = tool.description;
 
         infoDiv.appendChild(title);
         infoDiv.appendChild(desc);
-        
+
         card.appendChild(iconSpan);
         card.appendChild(infoDiv);
 
@@ -242,7 +242,7 @@ function createOverlay(content) {
         overlay.className = 'overlay';
         document.body.appendChild(overlay);
     }
-    overlay.className = 'overlay'; 
+    overlay.className = 'overlay';
     overlay.style.display = 'flex';
     overlay.innerHTML = `<div class="modal" style="width: 380px;">${content}</div>`;
 }
@@ -257,24 +257,25 @@ function closeOverlay() {
 
 function openEditOverlay(index) {
     const isNew = index === -1;
-    const tool = isNew ? { 
-        name: "", description: "", endpoint: "", 
-        icon: "default", epyTool: false, sdPath: "" 
+    const tool = isNew ? {
+        name: "", description: "", endpoint: "",
+        icon: "default", epyTool: false, sdPath: "",
+        isEditor: false, extensions: ""
     } : toolsData.tools[index];
-    
+
     let iconOptions = '';
     const icons = systemData.icons || { "default": "🛠️" };
-    
+
     Object.entries(icons).forEach(([key, char]) => {
         const isSelected = (tool.icon === key) ? 'selected' : '';
         iconOptions += `<option value="${key}" ${isSelected}>${char} ${key}</option>`;
     });
 
     const html = `
-        <h3>${isNew ? 'Add New Tool' : 'Edit Tool'}</h3>
+        <h3>${isNew ? 'Add New App' : 'Edit App'}</h3>
         <div class="modal-form">
             <div class="form-group">
-                <label>Tool Name</label>
+                <label>Name *</label>
                 <input type="text" id="tool-name" value="${tool.name}" placeholder="e.g., JSON Formatter">
             </div>
             <div class="form-group">
@@ -282,7 +283,7 @@ function openEditOverlay(index) {
                 <input type="text" id="tool-desc" value="${tool.description}" placeholder="Short description">
             </div>
             <div class="form-group">
-                <label>Endpoint / URL</label>
+                <label>Endpoint / URL *</label>
                 <input type="text" id="tool-url" value="${tool.endpoint}" placeholder="https://... or /tools/...">
                 <small class="validation-error" id="error-url"></small>
             </div>
@@ -291,13 +292,23 @@ function openEditOverlay(index) {
                 <select id="tool-icon">${iconOptions}</select>
             </div>
             <div class="form-group checkbox-group">
-                <input type="checkbox" id="tool-epy" ${tool.epyTool ? 'checked' : ''} onchange="toggleSdPathField()">
+                <input type="checkbox" id="tool-epy" ${tool.epyTool ? 'checked' : ''} onchange="toggleEpyFields()">
                 <label for="tool-epy">Is an EPY app?</label>
             </div>
-            <div class="form-group" id="group-sdpath" style="display: ${tool.epyTool ? 'block' : 'none'};">
-                <label>Application path (on SD)</label>
-                <input type="text" id="tool-sdpath" value="${tool.sdPath || ''}" placeholder="/sdcard/app/index.html">
-                <small class="validation-error" id="error-sdpath"></small>
+            <div id="group-epy-fields" style="display: ${tool.epyTool ? 'block' : 'none'};">
+                <div class="form-group">
+                    <label>Application path (on SD)</label>
+                    <input type="text" id="tool-sdpath" value="${tool.sdPath || ''}" placeholder="/sdcard/app/index.html">
+                    <small class="validation-error" id="error-sdpath"></small>
+                </div>
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="tool-iseditor" ${tool.isEditor ? 'checked' : ''}>
+                    <label for="tool-iseditor">Is Editor?</label>
+                </div>
+                <div class="form-group" title="Comma-separated list of extensions this editor supports (e.g. json, txt, md).">
+                    <label>Supported Extensions ℹ️</label>
+                    <input type="text" id="tool-extensions" value="${tool.extensions || ''}" placeholder="json,txt,js,html">
+                </div>
             </div>
         </div>
         <div class="modal-actions">
@@ -308,9 +319,9 @@ function openEditOverlay(index) {
     createOverlay(html);
 }
 
-function toggleSdPathField() {
+function toggleEpyFields() {
     const isChecked = document.getElementById('tool-epy').checked;
-    document.getElementById('group-sdpath').style.display = isChecked ? 'block' : 'none';
+    document.getElementById('group-epy-fields').style.display = isChecked ? 'block' : 'none';
 }
 
 function saveTool(index) {
@@ -320,10 +331,12 @@ function saveTool(index) {
     const url = document.getElementById('tool-url').value.trim();
     const isEpy = document.getElementById('tool-epy').checked;
     const sdPath = document.getElementById('tool-sdpath').value.trim();
-    
+    const isEditor = isEpy && document.getElementById('tool-iseditor') ? document.getElementById('tool-iseditor').checked : false;
+    const extensions = isEpy && document.getElementById('tool-extensions') ? document.getElementById('tool-extensions').value.trim() : "";
+
     let isValid = true;
 
-    if(!name || !url) {
+    if (!name || !url) {
         alert("Name and Endpoint are required!");
         return;
     }
@@ -360,14 +373,16 @@ function saveTool(index) {
         endpoint: url,
         icon: document.getElementById('tool-icon').value,
         epyTool: isEpy,
-        sdPath: isEpy ? sdPath : "" 
+        sdPath: isEpy ? sdPath : "",
+        isEditor: isEditor,
+        extensions: extensions
     };
 
     if (index === -1) toolsData.tools.push(newTool);
     else toolsData.tools[index] = newTool;
 
     closeOverlay();
-    renderStatsAndFilter(); 
+    renderStatsAndFilter();
     renderTools();
 }
 
@@ -396,7 +411,7 @@ function openDeleteConfirm(index) {
 function confirmDelete(index) {
     toolsData.tools.splice(index, 1);
     closeOverlay();
-    renderStatsAndFilter(); 
+    renderStatsAndFilter();
     renderTools();
 }
 
@@ -406,6 +421,6 @@ function saveToolsToServer() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(toolsData)
     })
-    .then(res => { if(!res.ok) alert("Error saving to server."); })
-    .catch(err => { console.error(err); alert("Network Error."); });
+        .then(res => { if (!res.ok) alert("Error saving to server."); })
+        .catch(err => { console.error(err); alert("Network Error."); });
 }

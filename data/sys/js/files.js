@@ -604,11 +604,20 @@ function renderFileOverlayContent(filename) {
     const overlay = document.getElementById('file-action-overlay');
     if(!overlay) return;
 
-    const epyTools = availableTools.filter(t => t.epyTool === true);
+    const epyEditors = availableTools.filter(t => t.epyTool === true && t.isEditor === true);
+    const currentExt = filename.split('.').pop().toLowerCase();
     
     let toolsHtml = '';
-    if (epyTools.length > 0) {
-        let options = epyTools.map(t => `<option value="${t.endpoint}">${t.name}</option>`).join('');
+    if (epyEditors.length > 0) {
+        let bestMatch = epyEditors.find(t => t.extensions && t.extensions.split(',').map(e => e.trim().toLowerCase()).includes(currentExt));
+        if (!bestMatch) bestMatch = epyEditors[0];
+        
+        const selectedEndpoint = bestMatch.endpoint;
+        
+        let options = epyEditors.map(t => {
+            const isSelected = t.endpoint === selectedEndpoint ? 'selected' : '';
+            return `<option value="${t.endpoint}" ${isSelected}>${t.name}</option>`;
+        }).join('');
         toolsHtml = `
             <div class="form-group" style="margin-top: 15px; background: #f9fafb; padding: 15px; border-radius: 8px;">
                 <label style="display:block; margin-bottom:5px; font-weight:600; font-size:0.9rem;">Open with EPY Tool</label>
@@ -621,7 +630,7 @@ function renderFileOverlayContent(filename) {
             </div>
         `;
     } else {
-        toolsHtml = `<p style="color:#666; font-style:italic; margin: 15px 0;">No EPY Tools available.</p>`;
+        toolsHtml = `<p style="color:#666; font-style:italic; margin: 15px 0;">No EPY Editors available.</p>`;
     }
 
     const modalContent = `
