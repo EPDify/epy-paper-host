@@ -263,6 +263,12 @@ function openEditOverlay(index) {
         isEditor: false, extensions: ""
     } : toolsData.tools[index];
 
+    const safeName = escapeHtml(tool.name);
+    const safeDesc = escapeHtml(tool.description);
+    const safeEndpoint = escapeHtml(tool.endpoint);
+    const safeSdPath = escapeHtml(tool.sdPath || '');
+    const safeExtensions = escapeHtml(tool.extensions || '');
+
     let iconOptions = '';
     const icons = systemData.icons || { "default": "🛠️" };
 
@@ -276,15 +282,15 @@ function openEditOverlay(index) {
         <div class="modal-form">
             <div class="form-group">
                 <label>Name *</label>
-                <input type="text" id="tool-name" value="${tool.name}" placeholder="e.g., JSON Formatter">
+                <input type="text" id="tool-name" value="${safeName}" placeholder="e.g., JSON Formatter">
             </div>
             <div class="form-group">
                 <label>Description</label>
-                <input type="text" id="tool-desc" value="${tool.description}" placeholder="Short description">
+                <input type="text" id="tool-desc" value="${safeDesc}" placeholder="Short description">
             </div>
             <div class="form-group">
                 <label>Endpoint / URL *</label>
-                <input type="text" id="tool-url" value="${tool.endpoint}" placeholder="https://... or /tools/...">
+                <input type="text" id="tool-url" value="${safeEndpoint}" placeholder="https://... or /tools/...">
                 <small class="validation-error" id="error-url"></small>
             </div>
             <div class="form-group">
@@ -298,7 +304,7 @@ function openEditOverlay(index) {
             <div id="group-epy-fields" style="display: ${tool.epyTool ? 'block' : 'none'};">
                 <div class="form-group">
                     <label>Application path (on SD)</label>
-                    <input type="text" id="tool-sdpath" value="${tool.sdPath || ''}" placeholder="/sdcard/app/index.html">
+                    <input type="text" id="tool-sdpath" value="${safeSdPath}" placeholder="/sdcard/app/index.html">
                     <small class="validation-error" id="error-sdpath"></small>
                 </div>
                 <div class="form-group checkbox-group">
@@ -307,7 +313,7 @@ function openEditOverlay(index) {
                 </div>
                 <div class="form-group" title="Comma-separated list of extensions this editor supports (e.g. json, txt, md).">
                     <label>Supported Extensions ℹ️</label>
-                    <input type="text" id="tool-extensions" value="${tool.extensions || ''}" placeholder="json,txt,js,html">
+                    <input type="text" id="tool-extensions" value="${safeExtensions}" placeholder="json,txt,js,html">
                 </div>
             </div>
         </div>
@@ -396,7 +402,7 @@ function generateId() {
 }
 
 function openDeleteConfirm(index) {
-    const toolName = toolsData.tools[index].name;
+    const toolName = escapeHtml(toolsData.tools[index].name);
     const html = `
         <h3>Delete Tool?</h3>
         <p>Remove <strong>${toolName}</strong>?</p>
@@ -423,4 +429,14 @@ function saveToolsToServer() {
     })
         .then(res => { if (!res.ok) alert("Error saving to server."); })
         .catch(err => { console.error(err); alert("Network Error."); });
+}
+
+function escapeHtml(unsafe) {
+    if (typeof unsafe !== 'string') return unsafe;
+    return unsafe
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
 }

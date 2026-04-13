@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Web IPTV Player (Pro Version)</title>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.6.15" integrity="sha384-iZBI1/lW9u8FcBjxuQ8nPTsU7TXhZNtzkV8H3gQHSTgz+VYQoKWqGlBHqhO84alJ" crossorigin="anonymous"></script>
     <style>
         :root {
             --bg-color: #121212;
@@ -449,13 +449,28 @@
                 if (channel.status === 'working') li.classList.add('working');
                 if (channel.status === 'broken') li.classList.add('broken');
 
-                li.innerHTML = `
-                    <span class="channel-info" onclick="playChannelById(${channel.id})">${channel.name || 'Unknown'}</span>
-                    <div class="controls-container">
-                        <button class="save-btn" onclick="saveChannel(${channel.id}, event)">Save</button>
-                        <span class="status-dot"></span>
-                    </div>
-                `;
+                const span = document.createElement('span');
+                span.className = 'channel-info';
+                span.textContent = channel.name || 'Unknown';
+                span.onclick = () => playChannelById(channel.id);
+                
+                const controlsContainer = document.createElement('div');
+                controlsContainer.className = 'controls-container';
+                
+                const saveBtn = document.createElement('button');
+                saveBtn.className = 'save-btn';
+                saveBtn.textContent = 'Save';
+                saveBtn.onclick = (e) => saveChannel(channel.id, e);
+                
+                const statusDot = document.createElement('span');
+                statusDot.className = 'status-dot';
+                
+                controlsContainer.appendChild(saveBtn);
+                controlsContainer.appendChild(statusDot);
+                
+                li.appendChild(span);
+                li.appendChild(controlsContainer);
+
                 channelListElement.appendChild(li);
             });
         }
@@ -472,10 +487,19 @@
             savedChannels.saving.forEach(channel => {
                 const div = document.createElement('div');
                 div.className = 'fav-item';
-                div.innerHTML = `
-                    <span onclick="playChannelByUrl('${channel.url}', '${channel.name}')">${channel.name}</span>
-                    <button class="fav-remove-btn" onclick="removeChannel('${channel.url}', event)">✕</button>
-                `;
+                
+                const span = document.createElement('span');
+                span.textContent = channel.name;
+                span.onclick = () => playChannelByUrl(channel.url, channel.name);
+                
+                const btn = document.createElement('button');
+                btn.className = 'fav-remove-btn';
+                btn.textContent = '✕';
+                btn.onclick = (e) => removeChannel(channel.url, e);
+                
+                div.appendChild(span);
+                div.appendChild(btn);
+
                 favouritesList.appendChild(div);
             });
         }

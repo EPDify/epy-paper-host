@@ -115,21 +115,19 @@ function validateCode() {
     if (errors.length === 0) {
         showSuccess('No syntax errors detected by the linter.');
     } else {
-        let errorHtml = '<strong>Syntax Errors:</strong><br>';
+        errorBar.innerHTML = '<strong>Syntax Errors:</strong><br>';
         errors.forEach(err => {
-            errorHtml += `<div class="error-item">Line ${err.row + 1}: ${err.text}</div>`;
+            const div = document.createElement('div');
+            div.className = 'error-item';
+            div.textContent = `Line ${err.row + 1}: ${err.text}`;
+            errorBar.appendChild(div);
         });
-        showErrorHtml(errorHtml);
+        errorBar.className = 'visible';
     }
 }
 
 function showError(msg) {
     errorBar.textContent = '✗ ' + msg;
-    errorBar.className = 'visible';
-}
-
-function showErrorHtml(html) {
-    errorBar.innerHTML = html;
     errorBar.className = 'visible';
 }
 

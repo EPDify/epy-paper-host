@@ -15,12 +15,24 @@ const Utils = (() => {
       info:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
     };
 
-    el.innerHTML = `
-      <span class="toast__icon">${icons[type] || icons.info}</span>
-      <span>${message}</span>
-      <button class="toast__close" onclick="this.parentElement.classList.add('toast-out'); setTimeout(() => this.parentElement.remove(), 300)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>`;
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'toast__icon';
+    iconSpan.innerHTML = icons[type] || icons.info;
+
+    const textSpan = document.createElement('span');
+    textSpan.textContent = message;
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'toast__close';
+    closeBtn.onclick = function() {
+      this.parentElement.classList.add('toast-out');
+      setTimeout(() => this.parentElement.remove(), 300);
+    };
+    closeBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+
+    el.appendChild(iconSpan);
+    el.appendChild(textSpan);
+    el.appendChild(closeBtn);
 
     container.appendChild(el);
     setTimeout(() => {

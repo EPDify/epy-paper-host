@@ -162,7 +162,7 @@ function openUploadOverlay() {
     // Updated HTML structure for Multi-file & DnD
     overlay.innerHTML = `
         <div class="modal" style="width: 450px;">
-            <h3>Upload to ${targetFolder}</h3>
+            <h3>Upload to ${escapeHtml(targetFolder)}</h3>
             
             <div class="upload-tabs">
                 <button class="tab-btn active" onclick="switchUploadTab('file')">Select Files</button>
@@ -308,7 +308,7 @@ window.performOverlayUpload = async function (folder) {
             progressItem.className = 'upload-progress-item';
             progressItem.innerHTML = `
                 <div class="progress-label">
-                    <span class="fname">${file.name}</span>
+                    <span class="fname">${escapeHtml(file.name)}</span>
                     <span class="pct">0%</span>
                 </div>
                 <div class="progress-bar-sm">
@@ -365,7 +365,7 @@ window.performOverlayUpload = async function (folder) {
         const progressItem = document.createElement('div');
         progressItem.className = 'upload-progress-item';
         progressItem.innerHTML = `
-            <div class="progress-label"><span>${name}</span><span class="pct">0%</span></div>
+            <div class="progress-label"><span>${escapeHtml(name)}</span><span class="pct">0%</span></div>
             <div class="progress-bar-sm"><div class="progress-fill-sm" style="width:0%"></div></div>
         `;
         progressContainer.appendChild(progressItem);
@@ -452,7 +452,7 @@ function renderTreeRecursive(node, container, depth) {
         const count = Object.keys(node.children).length;
         displayName += ` (${count})`;
     }
-    label.innerHTML = (node.isDir ? '📁 ' : '📄 ') + displayName;
+    label.textContent = (node.isDir ? '📁 ' : '📄 ') + displayName;
     header.appendChild(label);
 
     // 3. Controls
@@ -578,7 +578,7 @@ function openFileActionOverlay(path) {
 
     overlay.innerHTML = `
         <div class="modal" style="width: 380px;">
-            <h3>${filename}</h3>
+            <h3>${escapeHtml(filename)}</h3>
             <div class="loading">Loading tools...</div>
             <div class="modal-actions" style="margin-top:20px;">
                 <button class="btn" onclick="closeFileOverlay()">Close</button>
@@ -634,7 +634,7 @@ function renderFileOverlayContent(filename) {
 
     const modalContent = `
         <div class="modal" style="width: 380px;">
-            <h3 style="word-break: break-all;">${filename}</h3>
+            <h3 style="word-break: break-all;">${escapeHtml(filename)}</h3>
             
             ${toolsHtml}
             
@@ -781,4 +781,14 @@ function humanSize(bytes) {
     if (bytes < 1024) return bytes + " B";
     else if (bytes < 1048576) return (bytes / 1024).toFixed(2) + " KB";
     else return (bytes / 1048576).toFixed(2) + " MB";
+}
+
+function escapeHtml(unsafe) {
+    if (typeof unsafe !== 'string') return unsafe;
+    return unsafe
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
 }

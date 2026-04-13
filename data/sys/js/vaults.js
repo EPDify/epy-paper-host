@@ -104,6 +104,7 @@ function submitVaultSetup() {
 }
 
 function showVaultLogin(creds) {
+    const safeHint = escapeHtml(creds.hint || "No hint available");
     const html = `
         <h3>Vault Locked</h3>
         <div class="modal-form">
@@ -112,7 +113,7 @@ function showVaultLogin(creds) {
                 <input type="password" id="login-pass" placeholder="Enter password">
             </div>
         </div>
-        <div class="hint-text">Hint: ${creds.hint || "No hint available"}</div>
+        <div class="hint-text">Hint: ${safeHint}</div>
         <div class="modal-actions">
             <button class="btn btn-primary" onclick="submitVaultLogin('${creds.password}')">Unlock</button>
         </div>
@@ -187,11 +188,12 @@ function renderVaults(vaultList) {
         section.className = 'accordion-item';
 
         const content = vault.content || {};
-        const displayTitle = content.description || vault.filename;
+        const displayTitle = escapeHtml(content.description || vault.filename);
+        const safeFilename = escapeHtml(vault.filename);
 
         const header = document.createElement('div');
         header.className = 'accordion-header';
-        header.innerHTML = `<span>🔒 ${displayTitle} <small style="color:#9ca3af; font-weight:normal;">(${vault.filename})</small></span> <span class="arrow">▼</span>`;
+        header.innerHTML = `<span>🔒 ${displayTitle} <small style="color:#9ca3af; font-weight:normal;">(${safeFilename})</small></span> <span class="arrow">▼</span>`;
         header.onclick = () => toggleAccordion(section);
 
         const body = document.createElement('div');
@@ -201,38 +203,44 @@ function renderVaults(vaultList) {
         const entries = Array.isArray(content.content.entries) ? content.content.entries : [];
 
         entries.forEach(entry => {
+            const safeName = escapeHtml(entry.name || '');
+            const safeDesc = escapeHtml(entry.description || '');
+            const safeVal = escapeHtml(entry.value || '');
             entriesHtml += `
                 <div class="vault-entry">
                     <div class="entry-row">
                         <div class="entry-col">
                             <label>Name</label>
-                            <input type="text" class="entry-name" value="${entry.name || ''}" placeholder="Key Name">
+                            <input type="text" class="entry-name" value="${safeName}" placeholder="Key Name">
                         </div>
                         <div class="entry-col" style="flex-grow:2;">
                             <label>Description</label>
-                            <input type="text" class="entry-desc" value="${entry.description || ''}" placeholder="Description">
+                            <input type="text" class="entry-desc" value="${safeDesc}" placeholder="Description">
                         </div>
                         <button class="btn-icon danger remove-entry-btn" onclick="this.closest('.vault-entry').remove()" title="Delete Entry">🗑️</button>
                     </div>
                     <div class="entry-row" style="margin-top:10px;">
                         <div class="entry-col" style="width:100%;">
                             <label>Value</label>
-                            <textarea class="entry-val" placeholder="Secret Value">${entry.value || ''}</textarea>
+                            <textarea class="entry-val" placeholder="Secret Value">${safeVal}</textarea>
                         </div>
                     </div>
                 </div>
             `;
         });
 
+        const safeVaultName = escapeHtml(content.name || '');
+        const safeVaultDesc = escapeHtml(content.description || '');
+
         body.innerHTML = `
             <div class="vault-meta" style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #eee;">
                 <div class="form-group">
                     <label>Vault Name</label>
-                    <input type="text" class="vault-name-input" value="${content.name || ''}" placeholder="ID">
+                    <input type="text" class="vault-name-input" value="${safeVaultName}" placeholder="ID">
                 </div>
                 <div class="form-group">
                     <label>Description</label>
-                    <input type="text" class="vault-desc-input" value="${content.description || ''}" placeholder="Title">
+                    <input type="text" class="vault-desc-input" value="${safeVaultDesc}" placeholder="Title">
                 </div>
             </div>
             <div class="entries-list">${entriesHtml}</div>
@@ -401,4 +409,14 @@ function createVaultOverlay(content) {
 function closeVaultOverlay() {
     const overlay = document.getElementById('vault-overlay');
     if (overlay) overlay.classList.add('hidden');
+}
+
+function escapeHtml(unsafe) {
+    if (typeof unsafe !== 'string') return unsafe;
+    return unsafe
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
 }
