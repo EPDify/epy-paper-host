@@ -8,68 +8,6 @@
             "icon": "json",
             "epyTool": false,
             "sdPath": ""
-        },
-        {
-            "id": "VppXFdlB3yML",
-            "name": "MD Editor",
-            "description": "",
-            "endpoint": "/md/",
-            "icon": "text",
-            "epyTool": true,
-            "sdPath": "/apps/md-editor/",
-            "isEditor": true,
-            "extensions": "md"
-        },
-        {
-            "id": "bDlyYguERpSw",
-            "name": "EPDify Home",
-            "description": "",
-            "endpoint": "/epdify.info",
-            "icon": "code",
-            "epyTool": true,
-            "sdPath": "/apps/epdify.info/"
-        },
-        {
-            "id": "XQ6JMDFq39oM",
-            "name": "IPTV",
-            "description": "",
-            "endpoint": "/iptv/",
-            "icon": "video",
-            "epyTool": true,
-            "sdPath": "/apps/iptv/"
-        },
-        {
-            "id": "iN95J32deXhC",
-            "name": "PDF Editor",
-            "description": "",
-            "endpoint": "/pdf/",
-            "icon": "pdf",
-            "epyTool": true,
-            "sdPath": "/apps/pdf-editor/",
-            "isEditor": true,
-            "extensions": "pdf"
-        },
-        {
-            "id": "Mb6RB6rGOQWT",
-            "name": "JSON Editor",
-            "description": "",
-            "endpoint": "/JSON/",
-            "icon": "json",
-            "epyTool": true,
-            "sdPath": "/apps/json-editor/",
-            "isEditor": true,
-            "extensions": "json"
-        },
-        {
-            "id": "EgRYwJBe2Qqr",
-            "name": "Web Studio",
-            "description": "",
-            "endpoint": "/web/",
-            "icon": "word",
-            "epyTool": true,
-            "sdPath": "/apps/web-studio/",
-            "isEditor": true,
-            "extensions": "json,html,css,js"
         }
     ]
 }

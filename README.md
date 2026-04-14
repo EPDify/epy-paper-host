@@ -177,3 +177,6 @@ The `ESPTOOL` variable in `bin/config.sh` / `bin\config.bat` is already configur
 **Additional notes:**
 - The `--no-stub` flag (used with v4.6 as a workaround) is no longer needed — v5's flasher stub is stable over native USB.
 - If uploads still fail, manually enter bootloader mode before flashing: hold **BOOT** → press & release **RST** → release **BOOT**.
+
+## 9. EPDify YouTube Channel
+https://www.youtube.com/@EPDify-n6p

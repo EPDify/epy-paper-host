@@ -304,7 +304,7 @@ function openEditOverlay(index) {
             <div id="group-epy-fields" style="display: ${tool.epyTool ? 'block' : 'none'};">
                 <div class="form-group">
                     <label>Application path (on SD)</label>
-                    <input type="text" id="tool-sdpath" value="${safeSdPath}" placeholder="/sdcard/app/index.html">
+                    <input type="text" id="tool-sdpath" value="${safeSdPath}" placeholder="/apps/myapp/">
                     <small class="validation-error" id="error-sdpath"></small>
                 </div>
                 <div class="form-group checkbox-group">
@@ -319,7 +319,7 @@ function openEditOverlay(index) {
         </div>
         <div class="modal-actions">
             <button class="btn" onclick="closeOverlay()">Cancel</button>
-            <button class="btn btn-primary" onclick="saveTool(${index})">Save Tool</button>
+            <button class="btn btn-primary" onclick="saveTool(${index})">Save</button>
         </div>
     `;
     createOverlay(html);
@@ -434,9 +434,9 @@ function saveToolsToServer() {
 function escapeHtml(unsafe) {
     if (typeof unsafe !== 'string') return unsafe;
     return unsafe
-         .replace(/&/g, "&amp;")
-         .replace(/</g, "&lt;")
-         .replace(/>/g, "&gt;")
-         .replace(/"/g, "&quot;")
-         .replace(/'/g, "&#039;");
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }

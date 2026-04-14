@@ -459,20 +459,9 @@ function renderTreeRecursive(node, container, depth) {
     const controls = document.createElement('div');
     controls.className = 'node-controls';
 
-    const createCopyBtn = () => {
-        const btn = document.createElement('button');
-        btn.className = 'btn-icon copy-btn';
-        btn.innerText = '📋';
-        btn.title = 'Copy Path';
-        btn.onclick = (e) => {
-            e.stopPropagation();
-            copyToClipboard(node.path, node.isDir);
-        };
-        return btn;
-    };
 
     if (node.isDir) {
-        controls.appendChild(createCopyBtn());
+        // controls.appendChild(createCopyBtn());
 
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
@@ -493,7 +482,7 @@ function renderTreeRecursive(node, container, depth) {
         sizeSpan.innerText = humanSize(node.size);
         controls.appendChild(sizeSpan);
 
-        controls.appendChild(createCopyBtn());
+        // controls.appendChild(createCopyBtn());
 
         const openBtn = document.createElement('button');
         openBtn.className = 'btn-icon';
@@ -619,7 +608,7 @@ function renderFileOverlayContent(filename) {
         }).join('');
         toolsHtml = `
             <div class="form-group" style="margin-top: 15px; background: #f9fafb; padding: 15px; border-radius: 8px;">
-                <label style="display:block; margin-bottom:5px; font-weight:600; font-size:0.9rem;">Open with EPY Tool</label>
+                <label style="display:block; margin-bottom:5px; font-weight:600; font-size:0.9rem;">Open with an EPY Editor</label>
                 <div style="display:flex; gap:10px;">
                     <select id="file-tool-select" style="flex-grow:1; padding: 6px; border-radius:4px; border:1px solid #ccc;">
                         ${options}
@@ -674,49 +663,6 @@ function closeFileOverlay() {
         overlay.style.display = 'none';
         overlay.classList.add('hidden');
     }
-}
-
-// --- Helpers ---
-
-function copyToClipboard(fullPath, isDir) {
-    let relativePath = fullPath;
-    if (!relativePath.startsWith("/")) {
-        relativePath = "/" + relativePath;
-    }
-    if (isDir && !relativePath.endsWith("/")) {
-        relativePath += "/";
-    }
-
-    if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(relativePath).then(() => {
-            showToast("Copied: " + relativePath);
-        }).catch(err => {
-            fallbackCopyTextToClipboard(relativePath);
-        });
-    } else {
-        fallbackCopyTextToClipboard(relativePath);
-    }
-}
-
-function fallbackCopyTextToClipboard(text) {
-    const textArea = document.createElement("textarea");
-    textArea.value = text;
-    textArea.style.position = "fixed";
-    textArea.style.left = "-9999px";
-    textArea.style.top = "0";
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-
-    try {
-        const successful = document.execCommand('copy');
-        if (successful) showToast("Copied: " + text);
-        else alert("Copy failed. Path: " + text);
-    } catch (err) {
-        console.error('Fallback copy error', err);
-        alert("Copy failed. Path: " + text);
-    }
-    document.body.removeChild(textArea);
 }
 
 function showToast(msg) {
@@ -786,9 +732,9 @@ function humanSize(bytes) {
 function escapeHtml(unsafe) {
     if (typeof unsafe !== 'string') return unsafe;
     return unsafe
-         .replace(/&/g, "&amp;")
-         .replace(/</g, "&lt;")
-         .replace(/>/g, "&gt;")
-         .replace(/"/g, "&quot;")
-         .replace(/'/g, "&#039;");
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
