@@ -110,17 +110,16 @@ void Portal::begin(AsyncWebServer *server, i2c_equipment_shtc3 *sensor_ptr,
 
   server->on("/api/vault-auth", HTTP_POST, [this](AsyncWebServerRequest *request) {
     if (request->hasParam("encryptedPass", true)) {
-      String encryptedPass = request->getParam("encryptedPass", true)->value();
-      String decryptedPass = this->decryptString(encryptedPass, vaultSalt);
-
+      String expectedToken = request->getParam("encryptedPass", true)->value();
+      
       prefs.begin("vault", true);
-      String pass = prefs.getString("pass", "");
+      String masterKey = prefs.getString("pass", "");
       String hint = prefs.getString("hint", "");
       prefs.end();
 
-      if (pass.length() == 0) {
+      if (masterKey.length() == 0) {
         request->send(404, "application/json", "{\"status\":\"error\", \"message\":\"Not setup\"}");
-      } else if (pass == decryptedPass) {
+      } else if (expectedToken == this->hashSHA256(masterKey + vaultSalt)) {
         request->send(200, "application/json", "{\"status\":\"ok\"}");
       } else {
         String safeHint = hint;
@@ -256,21 +255,15 @@ void Portal::begin(AsyncWebServer *server, i2c_equipment_shtc3 *sensor_ptr,
       "/api/setup-vault", HTTP_POST, [this](AsyncWebServerRequest *request) {
         if (request->hasParam("encryptedPass", true) &&
             request->hasParam("hint", true)) {
-          String encryptedPass =
+          String masterKey =
               request->getParam("encryptedPass", true)->value();
           String hint = request->getParam("hint", true)->value();
 
-          // Decrypt to plaintext
-          String pass = decryptString(encryptedPass, vaultSalt);
-
-          // 1. Store Plaintext in NVS
+          // 1. Store Hashed MasterKey in NVS
           prefs.begin("vault", false); // Read-write
-          prefs.putString("pass", pass);
+          prefs.putString("pass", masterKey);
           prefs.putString("hint", hint);
           prefs.end();
-
-          // 2. Sync to file (Encrypts it)
-          this->syncCredFile();
 
           request->send(200, "application/json", "{\"status\":\"ok\"}");
         } else {
@@ -720,83 +713,43 @@ String Portal::generateSalt(int len) {
   return salt;
 }
 
-// Simple XOR Encryption + Hex Encoding
-String Portal::encryptString(String input, String key) {
-  String output = "";
-  if (key.length() == 0)
-    return input;
+String Portal::hashSHA256(String input) {
+  uint8_t hash[32];
+  mbedtls_md_context_t ctx;
+  mbedtls_md_type_t md_type = MBEDTLS_MD_SHA256;
 
-  for (int i = 0; i < input.length(); i++) {
-    char c = input[i] ^ key[i % key.length()];
-    if (c < 16)
-      output += "0";
-    output += String(c, HEX);
+  mbedtls_md_init(&ctx);
+  mbedtls_md_setup(&ctx, mbedtls_md_info_from_type(md_type), 0);
+  mbedtls_md_starts(&ctx);
+  mbedtls_md_update(&ctx, (const unsigned char *) input.c_str(), input.length());
+  mbedtls_md_finish(&ctx, hash);
+  mbedtls_md_free(&ctx);
+
+  String result = "";
+  for(int i = 0; i < 32; i++) {
+    char buf[3];
+    sprintf(buf, "%02x", hash[i]);
+    result += buf;
   }
-  return output;
-}
-
-// Simple Hex Decoding + XOR Decryption
-String Portal::decryptString(String hexInput, String key) {
-  if (key.length() == 0 || hexInput.length() % 2 != 0)
-    return hexInput;
-  String output = "";
-  for (int i = 0; i < hexInput.length(); i += 2) {
-    String hexByte = hexInput.substring(i, i + 2);
-    char c = (char)strtol(hexByte.c_str(), NULL, 16);
-    output += (char)(c ^ key[(i / 2) % key.length()]);
-  }
-  return output;
-}
-
-// Syncs the NVS plaintext password to the JSON file in encrypted form
-void Portal::syncCredFile() {
-  prefs.begin("vault", true); // Read-only mode
-  String pass = prefs.getString("pass", "");
-  String hint = prefs.getString("hint", "");
-  prefs.end();
-
-  if (pass.length() > 0) {
-    // Encrypt
-    String encryptedPass = encryptString(pass, vaultSalt);
-
-    // Create JSON
-    DynamicJsonDocument doc(1024);
-    doc["encryptedToken"] = encryptedPass;
-    doc["hint"] = hint;
-
-    // Ensure dir exists
-    if (!UserFS.exists("/secret"))
-      UserFS.mkdir("/secret");
-
-    // Write to file
-    File file = UserFS.open("/secret/cred.json", FILE_WRITE);
-    if (file) {
-      serializeJson(doc, file);
-      file.close();
-      Serial.println("Vault: Sync complete. Cred file updated with new salt.");
-    }
-  }
+  return result;
 }
 
 void Portal::initVaultSecurity() {
   // 1. Generate Session Salt
   vaultSalt = generateSalt(12);
-
-  // 2. Sync existing credentials (if any) to file with new salt
-  syncCredFile();
 }
 
 String Portal::getVaultSalt() { return vaultSalt; }
 
 bool Portal::isVaultAuthenticated(AsyncWebServerRequest *request) {
   if (!request->hasHeader("X-Vault-Token")) return false;
-  String encryptedPass = request->getHeader("X-Vault-Token")->value();
-  String decryptedPass = this->decryptString(encryptedPass, vaultSalt);
+  String incomingToken = request->getHeader("X-Vault-Token")->value();
 
   prefs.begin("vault", true);
-  String pass = prefs.getString("pass", "");
+  String masterKey = prefs.getString("pass", "");
   prefs.end();
 
-  if (pass.length() == 0) return false;
-  return pass == decryptedPass;
+  if (masterKey.length() == 0) return false;
+  String expectedToken = this->hashSHA256(masterKey + vaultSalt);
+  return incomingToken == expectedToken;
 }

@@ -9,6 +9,7 @@
 #include "sdcard_bsp.h"
 #include "utils.h"
 #include "user_data.h"
+#include <mbedtls/md.h>
 
 class Portal {
 public:
@@ -54,9 +55,7 @@ private:
 
     void updateVaultIndex(String newFilename, bool add);
     String generateSalt(int len);
-    String encryptString(String input, String key);
-    String decryptString(String hexInput, String key);
-    void syncCredFile();
+    String hashSHA256(String input);
     bool isVaultAuthenticated(AsyncWebServerRequest *request);
 };
 
