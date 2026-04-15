@@ -1,5 +1,5 @@
-const SECRET_BASE = "/secret/";
-const SESSION_DURATION = 30 * 60 * 1000; // 30 mins
+const SECRET_BASE = "/api/secret?filename=";
+let SESSION_DURATION = 30 * 60 * 1000; // default, updated from server
 
 // Global to hold the salt fetched from server
 let currentVaultSalt = "";
@@ -17,47 +17,60 @@ document.addEventListener("DOMContentLoaded", () => {
 function encryptPassword(password, salt) {
     if (!salt) return password; // Fallback
     let res = "";
-    for (let i = 0; i < password.length; i++) {
-        const charCode = password.charCodeAt(i) ^ salt.charCodeAt(i % salt.length);
-        // Convert to Hex, pad with 0 if needed
+    const encoder = new TextEncoder();
+    const passBytes = encoder.encode(password);
+    const saltBytes = encoder.encode(salt);
+    
+    for (let i = 0; i < passBytes.length; i++) {
+        const charCode = passBytes[i] ^ saltBytes[i % saltBytes.length];
         res += charCode.toString(16).padStart(2, '0');
     }
     return res;
 }
 
-// --- Authentication Logic ---
-
 function checkVaultAuth() {
     const session = localStorage.getItem("vault_session");
     const now = new Date().getTime();
+    let validSessionPass = ""; // defaults to empty to gracefully test validation
 
     if (session) {
-        const data = JSON.parse(session);
-        if (now - data.timestamp < SESSION_DURATION) {
-            initVaultsUI();
-            return;
+        try {
+            const sessData = JSON.parse(session);
+            if (now - sessData.timestamp < SESSION_DURATION) {
+                validSessionPass = sessData.token;
+            }
+        } catch(e) {
+            localStorage.removeItem("vault_session");
         }
     }
 
-    // Fetch creds and extract SALT from header
-    fetch(SECRET_BASE + 'cred.json')
-        .then(res => {
-            // 1. Capture Salt
-            const salt = res.headers.get('X-Vault-Salt');
-            if (salt) currentVaultSalt = salt;
+    fetch('/api/vault/status').then(res => {
+        const salt = res.headers.get('X-Vault-Salt');
+        if (salt) currentVaultSalt = salt;
+        const duration = res.headers.get('X-Vault-Duration');
+        if (duration) SESSION_DURATION = parseInt(duration, 10);
 
-            if (res.status === 404 || res.status === 500) {
-                showVaultSetup();
-                throw new Error("Setup needed");
-            }
-            return res.json();
-        })
-        .then(creds => {
-            if (creds) showVaultLogin(creds);
-        })
-        .catch(err => {
-            if (err.message !== "Setup needed") console.error(err);
+        const fd = new URLSearchParams();
+        fd.append('encryptedPass', validSessionPass);
+
+        return fetch('/api/vault-auth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: fd.toString()
         });
+    }).then(res => {
+        if (res.status === 200) {
+            initVaultsUI();
+        } else if (res.status === 404) {
+            showVaultSetup();
+        } else {
+            res.json().then(data => {
+                showVaultLogin({ hint: data.hint || "No hint available" });
+            }).catch(() => showVaultLogin({ hint: "No hint available" }));
+        }
+    }).catch(err => {
+        console.error("Vault check failed:", err);
+    });
 }
 
 function showVaultSetup() {
@@ -87,19 +100,25 @@ function submitVaultSetup() {
 
     if (!pass) return alert("Password required");
 
-    // Send PLAINTEXT to server. 
-    // Server will store plaintext in NVS (Preferences) 
-    // and write the Encrypted version to cred.json.
-    const payload = {
-        filename: "cred.json",
-        content: { password: pass, hint: hint }
-    };
+    // Encrypt the password using the session salt before transmitting
+    const encryptedPass = encryptPassword(pass, currentVaultSalt);
 
-    postSecret(payload).then(() => {
-        // We log in with the plaintext for the session
-        startSession(pass);
+    const formData = new URLSearchParams();
+    formData.append('encryptedPass', encryptedPass);
+    formData.append('hint', hint);
+
+    fetch('/api/setup-vault', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString()
+    }).then(res => {
+        if (!res.ok) throw new Error("Setup failed");
+
+        startSession(encryptedPass);
         closeVaultOverlay();
         initVaultsUI();
+    }).catch(err => {
+        alert(err.message);
     });
 }
 
@@ -110,39 +129,47 @@ function showVaultLogin(creds) {
         <div class="modal-form">
             <div class="form-group">
                 <label>Password</label>
-                <input type="password" id="login-pass" placeholder="Enter password">
+                <input type="password" id="login-pass" placeholder="Enter password" onkeydown="if(event.key === 'Enter') submitVaultLogin()">
             </div>
         </div>
         <div class="hint-text">Hint: ${safeHint}</div>
         <div class="modal-actions">
-            <button class="btn btn-primary" onclick="submitVaultLogin('${creds.password}')">Unlock</button>
+            <button class="btn btn-primary" onclick="submitVaultLogin()">Unlock</button>
         </div>
     `;
     createVaultOverlay(html);
 }
 
-function submitVaultLogin(encryptedTargetPass) {
+function submitVaultLogin() {
     const inputPass = document.getElementById('login-pass').value;
 
     // 1. Encrypt the input using the session SALT
     const calculatedHash = encryptPassword(inputPass, currentVaultSalt);
 
-    // 2. Compare with the value in cred.json
-    if (calculatedHash === encryptedTargetPass) {
-        startSession(inputPass);
-        closeVaultOverlay();
-        initVaultsUI();
-    } else {
-        alert("Incorrect password");
-        const box = document.getElementById('login-pass');
-        box.value = '';
-        box.focus();
-    }
+    const fd = new URLSearchParams();
+    fd.append('encryptedPass', calculatedHash);
+
+    fetch('/api/vault-auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: fd.toString()
+    }).then(res => {
+        if (res.ok) {
+            startSession(calculatedHash);
+            closeVaultOverlay();
+            initVaultsUI();
+        } else {
+            alert("Incorrect password");
+            const box = document.getElementById('login-pass');
+            box.value = '';
+            box.focus();
+        }
+    });
 }
 
 function startSession(pass) {
     const session = {
-        token: "logged-in",
+        token: pass,
         timestamp: new Date().getTime()
     };
     localStorage.setItem("vault_session", JSON.stringify(session));
@@ -151,11 +178,41 @@ function startSession(pass) {
 // ... Rest of Vault UI Logic (initVaultsUI, renderVaults, etc) remains the same ...
 // ... (Include previous loadVaultFiles, renderVaults, addVaultEntry, saveVault, deleteVault, createNewVault, postSecret, overlay helpers) ...
 
+function fetchSecure(url, options = {}) {
+    const session = localStorage.getItem("vault_session");
+    let token = "";
+    if (session) {
+        const sessData = JSON.parse(session);
+        if (new Date().getTime() - sessData.timestamp < SESSION_DURATION) {
+            token = sessData.token;
+        } else {
+            localStorage.removeItem("vault_session");
+        }
+    }
+
+    if (!token) {
+        showVaultLogin({ hint: "Session Expired" });
+        return Promise.reject(new Error("Unauthorized"));
+    }
+
+    const headers = { ...(options.headers || {}) };
+    headers['X-Vault-Token'] = token;
+
+    return fetch(url, { ...options, headers }).then(res => {
+        if (res.status === 401) {
+            localStorage.removeItem("vault_session");
+            showVaultLogin({ hint: "Session Expired" });
+            throw new Error("Unauthorized");
+        }
+        return res;
+    });
+}
+
 function initVaultsUI() {
     const container = document.getElementById('vaults-container');
     container.innerHTML = '<div class="loading">Loading vaults...</div>';
 
-    fetch(SECRET_BASE + 'vaults.json')
+    fetchSecure(SECRET_BASE + 'vaults.json')
         .then(res => res.json())
         .then(data => {
             const files = data.vaults || [];
@@ -168,7 +225,7 @@ function initVaultsUI() {
 
 function loadVaultFiles(filenames) {
     const promises = filenames.map(file =>
-        fetch(SECRET_BASE + file).then(res => res.json()).then(json => ({
+        fetchSecure(SECRET_BASE + file).then(res => res.json()).then(json => ({
             filename: file,
             content: json
         })).catch(e => null)
@@ -200,7 +257,7 @@ function renderVaults(vaultList) {
         body.className = 'accordion-body';
 
         let entriesHtml = '';
-        const entries = Array.isArray(content.content.entries) ? content.content.entries : [];
+        const entries = Array.isArray(content?.entries) ? content?.entries : [];
 
         entries.forEach(entry => {
             const safeName = escapeHtml(entry.name || '');
@@ -229,8 +286,8 @@ function renderVaults(vaultList) {
             `;
         });
 
-        const safeVaultName = escapeHtml(content.name || '');
-        const safeVaultDesc = escapeHtml(content.description || '');
+        const safeVaultName = escapeHtml(content?.name || '');
+        const safeVaultDesc = escapeHtml(content?.description || '');
 
         body.innerHTML = `
             <div class="vault-meta" style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #eee;">
@@ -355,7 +412,7 @@ function saveVault(filename, btn) {
 
 function deleteVault(filename) {
     if (confirm(`Delete "${filename}"?`)) {
-        fetch(`/api/secret?filename=${encodeURIComponent(filename)}`, { method: 'DELETE' })
+        fetchSecure(`/api/secret?filename=${encodeURIComponent(filename)}`, { method: 'DELETE' })
             .then(res => {
                 if (res.ok) initVaultsUI();
                 else alert("Failed to delete vault.");
@@ -370,6 +427,7 @@ function createNewVault() {
     const filename = filenameInput.value.trim();
 
     if (!filename || !filename.endsWith('.json')) return alert("Filename must end in .json");
+    if (filename.includes('/') || filename.includes('..')) return alert("Invalid filename");
 
     const payload = {
         filename: filename,
@@ -383,7 +441,7 @@ function createNewVault() {
 }
 
 function postSecret(payload) {
-    return fetch('/api/secret', {
+    return fetchSecure('/api/secret', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -414,9 +472,9 @@ function closeVaultOverlay() {
 function escapeHtml(unsafe) {
     if (typeof unsafe !== 'string') return unsafe;
     return unsafe
-         .replace(/&/g, "&amp;")
-         .replace(/</g, "&lt;")
-         .replace(/>/g, "&gt;")
-         .replace(/"/g, "&quot;")
-         .replace(/'/g, "&#039;");
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }

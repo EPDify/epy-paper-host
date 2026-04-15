@@ -55,7 +55,9 @@ private:
     void updateVaultIndex(String newFilename, bool add);
     String generateSalt(int len);
     String encryptString(String input, String key);
+    String decryptString(String hexInput, String key);
     void syncCredFile();
+    bool isVaultAuthenticated(AsyncWebServerRequest *request);
 };
 
 #endif

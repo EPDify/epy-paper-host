@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VaultAccess SPA Example</title>
+    <style>
+        body { font-family: -apple-system, system-ui, sans-serif; padding: 40px; background-color: #f4f7f6; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #333; margin-top: 0; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #555; }
+        input { padding: 10px; width: 100%; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+        button { padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+        button:hover { background: #218838; }
+        .result-box { margin-top: 25px; padding: 15px; background: #e9ecef; border-radius: 6px; min-height: 50px; font-family: monospace; white-space: pre-wrap; word-break: break-all; }
+        .error { color: #dc3545; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Vault Secret Access Example</h1>
+    <p>This SPA loads <code>vault-access.js</code> to securely fetch a secret entry. If locked, it handles authentication via an independent modal overlay.</p>
+
+    <div class="form-group">
+        <label>Vault Filename</label>
+        <input type="text" id="filename" value="api-keys.json">
+    </div>
+
+    <div class="form-group">
+        <label>Entry Name</label>
+        <input type="text" id="entryName" value="claude">
+    </div>
+
+    <button onclick="fetchSecret()">Get Secret</button>
+
+    <div class="result-box" id="result">Result will appear here...</div>
+</div>
+
+<script src="vault-access.js"></script>
+<script>
+    function fetchSecret() {
+        const file = document.getElementById('filename').value.trim();
+        const entry = document.getElementById('entryName').value.trim();
+        const resBox = document.getElementById('result');
+        
+        resBox.innerText = "Loading...";
+        resBox.className = "result-box";
+        resBox.style.color = '#666';
+        
+        VaultAccess.getVaultSecret(file, entry)
+            .then(val => {
+                resBox.innerText = "Secret Value: \n\n" + val;
+                resBox.style.color = '#333';
+            })
+            .catch(err => {
+                resBox.innerText = "Error: " + err.message;
+                resBox.classList.add('error');
+            });
+    }
+</script>
+
+</body>
+</html>

@@ -7,7 +7,13 @@
 #define FIRMWARE_VERSION "1.0.0"
 #define SD_MOUNT_POINT "/sdcard"
 #define UPLOAD_BUFFER_SIZE 8192
+#define VAULT_SESSION_DURATION_MS 1800000 // 30 minutes
 String vaultSalt = "";
+
+struct VaultUploadState {
+  bool isAuthenticated;
+  String buffer;
+};
 
 // --- Custom Response Class (Internal Helper) ---
 class AsyncVFSResponse : public AsyncAbstractResponse {
@@ -95,23 +101,65 @@ void Portal::begin(AsyncWebServer *server, i2c_equipment_shtc3 *sensor_ptr,
   });
   server->serveStatic("/logs", UserFS, "/logs/");
 
-  server->on("/secret/cred.json", HTTP_GET, [](AsyncWebServerRequest *request) {
-    if (UserFS.exists("/secret/cred.json")) {
-      AsyncWebServerResponse *response = request->beginResponse(
-          UserFS, "/secret/cred.json", "application/json");
-      response->addHeader("X-Vault-Salt", vaultSalt);
-      request->send(response);
+  server->on("/api/vault/status", HTTP_GET, [](AsyncWebServerRequest *request) {
+    AsyncWebServerResponse *response = request->beginResponse(204);
+    response->addHeader("X-Vault-Salt", vaultSalt);
+    response->addHeader("X-Vault-Duration", String(VAULT_SESSION_DURATION_MS));
+    request->send(response);
+  });
+
+  server->on("/api/vault-auth", HTTP_POST, [this](AsyncWebServerRequest *request) {
+    if (request->hasParam("encryptedPass", true)) {
+      String encryptedPass = request->getParam("encryptedPass", true)->value();
+      String decryptedPass = this->decryptString(encryptedPass, vaultSalt);
+
+      prefs.begin("vault", true);
+      String pass = prefs.getString("pass", "");
+      String hint = prefs.getString("hint", "");
+      prefs.end();
+
+      if (pass.length() == 0) {
+        request->send(404, "application/json", "{\"status\":\"error\", \"message\":\"Not setup\"}");
+      } else if (pass == decryptedPass) {
+        request->send(200, "application/json", "{\"status\":\"ok\"}");
+      } else {
+        String safeHint = hint;
+        safeHint.replace("\\", "\\\\");
+        safeHint.replace("\"", "\\\"");
+        safeHint.replace("\n", "\\n");
+        safeHint.replace("\r", "\\r");
+        request->send(401, "application/json", "{\"status\":\"error\", \"message\":\"Unauthorized\", \"hint\":\"" + safeHint + "\"}");
+      }
     } else {
-      // Even on 404, send the salt (useful for debugging or future stateless
-      // setup)
-      AsyncWebServerResponse *response =
-          request->beginResponse(404, "text/plain", "Not found");
-      response->addHeader("X-Vault-Salt", vaultSalt);
-      request->send(response);
+      request->send(400, "application/json", "{\"status\":\"error\", \"message\":\"Missing parameters\"}");
     }
   });
 
-  server->serveStatic("/secret", UserFS, "/secret/");
+  server->on("/api/secret", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    if (!this->isVaultAuthenticated(request)) {
+      request->send(401, "application/json", "{\"error\":\"Unauthorized\"}");
+      return;
+    }
+    if (request->hasParam("filename")) {
+      String filename = request->getParam("filename")->value();
+      if (filename.indexOf('/') != -1 || filename.indexOf("..") != -1) {
+        request->send(400, "application/json", "{\"error\":\"Invalid filename\"}");
+        return;
+      }
+      if (filename == "cred.json") {
+        request->send(403, "application/json", "{\"error\":\"Access denied\"}");
+        return;
+      }
+      String filePath = "/secret/" + filename;
+      if (UserFS.exists(filePath)) {
+        request->send(UserFS, filePath, "application/json");
+      } else {
+        request->send(404, "application/json", "{\"error\":\"Not found\"}");
+      }
+    } else {
+      request->send(400, "application/json", "{\"error\":\"Missing filename\"}");
+    }
+  });
 
   server->on(
       "/dynamic/tools.json", HTTP_POST,
@@ -205,45 +253,83 @@ void Portal::begin(AsyncWebServer *server, i2c_equipment_shtc3 *sensor_ptr,
       });
 
   server->on(
+      "/api/setup-vault", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        if (request->hasParam("encryptedPass", true) &&
+            request->hasParam("hint", true)) {
+          String encryptedPass =
+              request->getParam("encryptedPass", true)->value();
+          String hint = request->getParam("hint", true)->value();
+
+          // Decrypt to plaintext
+          String pass = decryptString(encryptedPass, vaultSalt);
+
+          // 1. Store Plaintext in NVS
+          prefs.begin("vault", false); // Read-write
+          prefs.putString("pass", pass);
+          prefs.putString("hint", hint);
+          prefs.end();
+
+          // 2. Sync to file (Encrypts it)
+          this->syncCredFile();
+
+          request->send(200, "application/json", "{\"status\":\"ok\"}");
+        } else {
+          request->send(
+              400, "application/json",
+              "{\"status\":\"error\", \"message\":\"Missing parameters\"}");
+        }
+      });
+
+  server->on(
       "/api/secret", HTTP_POST,
-      [](AsyncWebServerRequest *request) {
-        request->send(200, "application/json", "{\"status\":\"ok\"}");
+      [this](AsyncWebServerRequest *request) {
+        if (!this->isVaultAuthenticated(request)) {
+          request->send(401, "application/json", "{\"status\":\"error\", \"message\":\"Unauthorized\"}");
+        } else {
+          request->send(200, "application/json", "{\"status\":\"ok\"}");
+        }
       },
       NULL,
       [this](AsyncWebServerRequest *request, uint8_t *data, size_t len,
              size_t index, size_t total) {
-        static String bodyBuffer;
+        VaultUploadState *state = (VaultUploadState*)request->_tempObject;
+        if (index == 0) {
+          state = new VaultUploadState();
+          state->isAuthenticated = this->isVaultAuthenticated(request);
+          state->buffer = "";
+          request->_tempObject = state;
+        }
+
+        if (!state || !state->isAuthenticated) {
+          if (index + len == total && state) {
+            delete state;
+            request->_tempObject = NULL;
+          }
+          return;
+        }
+        
         for (size_t i = 0; i < len; i++)
-          bodyBuffer += (char)data[i];
+          state->buffer += (char)data[i];
 
         if (index + len == total) {
           DynamicJsonDocument doc(4096);
-          DeserializationError error = deserializeJson(doc, bodyBuffer);
+          DeserializationError error = deserializeJson(doc, state->buffer);
 
           if (!error && doc.containsKey("filename") &&
               doc.containsKey("content")) {
             String filename = doc["filename"].as<String>();
 
-            // SPECIAL HANDLING FOR CREDENTIALS
-            if (filename == "cred.json") {
-              JsonObject content = doc["content"];
-              String pass = content["password"].as<String>();
-              String hint = content["hint"].as<String>();
-
-              // 1. Store Plaintext in NVS
-              prefs.begin("vault", false); // Read-write
-              prefs.putString("pass", pass);
-              prefs.putString("hint", hint);
-              prefs.end();
-
-              // 2. Sync to file (Encrypts it)
-              this->syncCredFile();
-
+            // Validate filename
+            if (filename.indexOf('/') != -1 || filename.indexOf("..") != -1) {
+              // skip path traversal silently
+            } else if (filename == "cred.json" || filename == "vaults.json") {
+              // skip protected files silently
             } else {
-              // Normal Vault Handling
-              String filePath = "/secret/" + filename;
-              if (!UserFS.exists("/secret"))
-                UserFS.mkdir("/secret");
+
+            // Normal Vault Handling
+            String filePath = "/secret/" + filename;
+            if (!UserFS.exists("/secret"))
+              UserFS.mkdir("/secret");
 
               File file = UserFS.open(filePath, FILE_WRITE);
               if (file) {
@@ -253,28 +339,33 @@ void Portal::begin(AsyncWebServer *server, i2c_equipment_shtc3 *sensor_ptr,
               }
             }
           }
-          bodyBuffer = "";
+          delete state;
+          request->_tempObject = NULL;
         }
       });
 
   // 4. DELETE /api/secret
   server->on("/api/secret", HTTP_DELETE,
              [this](AsyncWebServerRequest *request) {
+               if (!this->isVaultAuthenticated(request)) {
+                 request->send(401, "application/json", "{\"error\":\"Unauthorized\"}");
+                 return;
+               }
                if (request->hasParam("filename")) {
                  String filename = request->getParam("filename")->value();
-
-                 if (filename == "cred.json") {
-                   // Wipe NVS
-                   prefs.begin("vault", false);
-                   prefs.clear();
-                   prefs.end();
+                 if (filename.indexOf('/') != -1 || filename.indexOf("..") != -1) {
+                   request->send(400, "application/json", "{\"error\":\"Invalid filename\"}");
+                   return;
+                 }
+                 if (filename == "cred.json" || filename == "vaults.json") {
+                   request->send(403, "application/json", "{\"error\":\"Access denied\"}");
+                   return;
                  }
 
                  String filePath = "/secret/" + filename;
                  if (UserFS.exists(filePath)) {
                    UserFS.remove(filePath);
-                   if (filename != "cred.json")
-                     this->updateVaultIndex(filename, false);
+                   this->updateVaultIndex(filename, false);
                    request->send(200, "text/plain", "Deleted");
                  } else {
                    request->send(404, "text/plain", "File not found");
@@ -644,6 +735,19 @@ String Portal::encryptString(String input, String key) {
   return output;
 }
 
+// Simple Hex Decoding + XOR Decryption
+String Portal::decryptString(String hexInput, String key) {
+  if (key.length() == 0 || hexInput.length() % 2 != 0)
+    return hexInput;
+  String output = "";
+  for (int i = 0; i < hexInput.length(); i += 2) {
+    String hexByte = hexInput.substring(i, i + 2);
+    char c = (char)strtol(hexByte.c_str(), NULL, 16);
+    output += (char)(c ^ key[(i / 2) % key.length()]);
+  }
+  return output;
+}
+
 // Syncs the NVS plaintext password to the JSON file in encrypted form
 void Portal::syncCredFile() {
   prefs.begin("vault", true); // Read-only mode
@@ -657,7 +761,7 @@ void Portal::syncCredFile() {
 
     // Create JSON
     DynamicJsonDocument doc(1024);
-    doc["password"] = encryptedPass;
+    doc["encryptedToken"] = encryptedPass;
     doc["hint"] = hint;
 
     // Ensure dir exists
@@ -677,10 +781,22 @@ void Portal::syncCredFile() {
 void Portal::initVaultSecurity() {
   // 1. Generate Session Salt
   vaultSalt = generateSalt(12);
-  Serial.println("Vault: Session Salt generated: " + vaultSalt);
 
   // 2. Sync existing credentials (if any) to file with new salt
   syncCredFile();
 }
 
 String Portal::getVaultSalt() { return vaultSalt; }
+
+bool Portal::isVaultAuthenticated(AsyncWebServerRequest *request) {
+  if (!request->hasHeader("X-Vault-Token")) return false;
+  String encryptedPass = request->getHeader("X-Vault-Token")->value();
+  String decryptedPass = this->decryptString(encryptedPass, vaultSalt);
+
+  prefs.begin("vault", true);
+  String pass = prefs.getString("pass", "");
+  prefs.end();
+
+  if (pass.length() == 0) return false;
+  return pass == decryptedPass;
+}
