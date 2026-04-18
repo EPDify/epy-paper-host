@@ -180,3 +180,6 @@ The `ESPTOOL` variable in `bin/config.sh` / `bin\config.bat` is already configur
 
 ## 9. EPDify YouTube Channel
 https://www.youtube.com/@EPDify-n6p
+
+## 10. Wiki
+https://github.com/EPDify/epy-paper-host/wiki
