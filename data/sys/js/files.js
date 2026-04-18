@@ -567,7 +567,7 @@ function openFileActionOverlay(path) {
 
     overlay.innerHTML = `
         <div class="modal" style="width: 380px;">
-            <h3>${escapeHtml(filename)}</h3>
+            <h3>Actions for ${escapeHtml(filename)}</h3>
             <div class="loading">Loading tools...</div>
             <div class="modal-actions" style="margin-top:20px;">
                 <button class="btn" onclick="closeFileOverlay()">Close</button>
