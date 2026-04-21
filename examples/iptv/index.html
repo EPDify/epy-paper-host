@@ -354,9 +354,9 @@
             try {
                 const blob = new Blob([JSON.stringify(dataObj, null, 2)], { type: 'application/json' });
                 const formData = new FormData();
-                formData.append('file', blob, filename);
+                formData.append('file', blob, FOLDER_PATH + filename);
 
-                await fetch(`/system/upload?folder=${FOLDER_PATH}`, {
+                await fetch('/system/upload', {
                     method: 'POST',
                     body: formData
                 });

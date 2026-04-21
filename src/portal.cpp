@@ -241,14 +241,7 @@ void Portal::begin(AsyncWebServer *server, i2c_equipment_shtc3 *sensor_ptr,
       },
       [this](AsyncWebServerRequest *request, String filename, size_t index,
              uint8_t *data, size_t len, bool final) {
-        // Strip SD_MOUNT_POINT from filename if present
-        String processedFilename = filename;
-        if (processedFilename.startsWith(SD_MOUNT_POINT)) {
-          processedFilename =
-              processedFilename.substring(strlen(SD_MOUNT_POINT));
-        }
-        this->_handleUpload(request, processedFilename, index, data, len,
-                            final);
+        this->_handleUpload(request, filename, index, data, len, final);
       });
 
   server->on(
@@ -474,6 +467,13 @@ void Portal::_handleListFiles(AsyncWebServerRequest *request) {
 void Portal::_handleFileGetAction(AsyncWebServerRequest *request) {
   if (request->hasParam("name")) {
     String fileName = request->getParam("name")->value();
+
+    struct stat st;
+    if (stat(fileName.c_str(), &st) != 0 || S_ISDIR(st.st_mode)) {
+      request->send(404, "text/plain", "Not Found");
+      return;
+    }
+
     int lastSlash = fileName.lastIndexOf('/');
     String shortName =
         (lastSlash != -1) ? fileName.substring(lastSlash + 1) : fileName;
@@ -559,21 +559,10 @@ void Portal::_handleUpload(AsyncWebServerRequest *request, String filename,
       return;
     }
 
-    String folder = "/";
-    if (request->hasParam("folder", true))
-      folder = request->getParam("folder", true)->value();
-    else if (request->hasParam("folder"))
-      folder = request->getParam("folder")->value();
-
-    String fullPath;
-    if (folder.startsWith(SD_MOUNT_POINT)) {
-      fullPath = folder + "/" + filename;
-    } else {
-      if (!folder.startsWith("/"))
-        folder = "/" + folder;
-      if (folder == "/")
-        folder = "";
-      fullPath = String(SD_MOUNT_POINT) + folder + "/" + filename;
+    // filename is expected to be the full path starting with /sdcard
+    String fullPath = filename;
+    if (!fullPath.startsWith(SD_MOUNT_POINT)) {
+      fullPath = String(SD_MOUNT_POINT) + fullPath;
     }
 
     while (fullPath.indexOf("//") != -1)

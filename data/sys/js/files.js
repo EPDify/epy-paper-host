@@ -254,11 +254,14 @@ window.closeUploadOverlay = function () {
 // New Helper: Upload with Progress Callback
 function uploadFileWithProgress(file, folder, onProgress) {
     return new Promise((resolve, reject) => {
+        const fullPath = folder.endsWith('/') ? folder + file.name : folder + '/' + file.name;
+        const renamedFile = new File([file], fullPath, { type: file.type });
+
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append("file", renamedFile);
 
         const xhr = new XMLHttpRequest();
-        xhr.open("POST", "/system/upload?folder=" + encodeURIComponent(folder));
+        xhr.open("POST", "/system/upload");
 
         xhr.upload.addEventListener("progress", (e) => {
             if (e.lengthComputable) {
@@ -359,7 +362,8 @@ window.performOverlayUpload = async function (folder) {
             return;
         }
 
-        const fileToUpload = new File([content], name, { type: "text/plain" });
+        const fullPath = folder.endsWith('/') ? folder + name : folder + '/' + name;
+        const fileToUpload = new File([content], fullPath, { type: "text/plain" });
 
         // UI for single paste upload
         const progressItem = document.createElement('div');
@@ -690,11 +694,14 @@ function showToast(msg) {
 // Changed to support File Object upload (Used by both legacy and Overlay)
 function uploadSingleFile(fileObj, folder) {
     return new Promise((resolve, reject) => {
+        const fullPath = folder.endsWith('/') ? folder + fileObj.name : folder + '/' + fileObj.name;
+        const renamedFile = new File([fileObj], fullPath, { type: fileObj.type });
+
         const formData = new FormData();
-        formData.append("file", fileObj);
+        formData.append("file", renamedFile);
 
         const xhr = new XMLHttpRequest();
-        xhr.open("POST", "/system/upload?folder=" + encodeURIComponent(folder));
+        xhr.open("POST", "/system/upload");
 
         xhr.onload = () => {
             if (xhr.status === 200) resolve();

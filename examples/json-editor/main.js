@@ -224,9 +224,9 @@ async function uploadFile() {
     try {
         const blob = new Blob([content], { type: 'application/json' });
         const formData = new FormData();
-        formData.append('file', blob, currentFileName);
+        formData.append('file', blob, currentFilePath);
 
-        const url = `${SYSTEM_UPLOAD_URL}?folder=${encodeURIComponent(currentFolder)}`;
+        const url = SYSTEM_UPLOAD_URL;
         const response = await fetch(url, {
             method: 'POST',
             body: formData,

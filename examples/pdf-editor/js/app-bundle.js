@@ -174,20 +174,19 @@ const ExportManager = (() => {
 
     /**
      * Upload the final PDF to the remote server.
-     * POST /system/upload?folder=<folder>
-     * @param {string} folder -- target folder path
-     * @param {string} [filename='edited.pdf']
+     * POST /system/upload
+     * @param {string} filePath -- full file path starting with /sdcard
      */
-    async function uploadPDF(folder, filename = 'edited.pdf') {
+    async function uploadPDF(filePath) {
         try {
             Utils.showSpinner('Uploading PDF...');
             const bytes = await buildFinalPDF();
             const blob = new Blob([bytes], { type: 'application/pdf' });
 
             const formData = new FormData();
-            formData.append('file', blob, filename);
+            formData.append('file', blob, filePath);
 
-            const url = `/system/upload?folder=${encodeURIComponent(folder)}`;
+            const url = '/system/upload';
             const response = await fetch(url, {
                 method: 'POST',
                 body: formData,
@@ -381,10 +380,10 @@ const ExportManager = (() => {
     // -- Download / Upload ----------------------------------
     btnDownload?.addEventListener('click', () => ExportManager.downloadPDF(currentFileName));
     btnUpload?.addEventListener('click', () => {
-        if (remoteFolderPath) {
-            ExportManager.uploadPDF(remoteFolderPath, currentFileName);
+        if (remoteFilePath) {
+            ExportManager.uploadPDF(remoteFilePath);
         } else {
-            Utils.toast('No remote folder to upload to', 'warning');
+            Utils.toast('No remote file path to upload to', 'warning');
         }
     });
 
