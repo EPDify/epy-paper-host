@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cred Vault</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <!-- Container: Setup Domain & Filename -->
+    <div id="setup-container" class="container hidden">
+        <h2>Vault Settings</h2>
+        <div class="form-group">
+            <label for="vault-domain">Vault Domain</label>
+            <input type="text" id="vault-domain" placeholder="http://192.168.68.110">
+        </div>
+        <div class="form-group">
+            <label for="vault-filename">JSON File</label>
+            <input type="text" id="vault-filename" value="credentials.json">
+        </div>
+        <button id="save-settings-btn" class="btn primary">Save & Connect</button>
+    </div>
+
+    <!-- Container: Main UI (Loading / Found / Add New) -->
+    <div id="main-container" class="container hidden">
+        <div class="header">
+            <h2 id="header-domain" class="truncate">domain.com</h2>
+            <button id="settings-btn" class="icon-btn" title="Settings">⚙️</button>
+        </div>
+
+        <!-- Section: Loader -->
+        <div id="loading-state" class="state-view">
+            <div class="spinner"></div>
+            <p>Accessing Vault...</p>
+        </div>
+
+        <!-- Section: Credential Found -->
+        <div id="found-state" class="state-view hidden">
+            <div class="credential-card">
+                <span id="found-entry-name" class="entry-name"></span>
+                <span id="found-entry-desc" class="entry-desc truncate"></span>
+            </div>
+            <div class="flex-actions">
+                <button id="fill-btn" class="btn primary">Fill</button>
+                <button id="open-btn" class="btn secondary">Open</button>
+            </div>
+        </div>
+
+        <!-- Section: Detail Overlay -->
+        <div id="detail-overlay" class="overlay-panel hidden">
+            <div class="overlay-content">
+                <h2>Vault Entry</h2>
+                <div class="form-group">
+                    <label>Name / Username</label>
+                    <input type="text" id="detail-name" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Password / Value</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="password" id="detail-value" readonly style="flex: 1;">
+                        <button id="toggle-pw-btn" class="icon-btn" title="Toggle Visibility">👁️</button>
+                    </div>
+                </div>
+                <div class="flex-actions">
+                    <button id="close-detail-btn" class="btn secondary">Close</button>
+                    <button id="delete-entry-btn" class="btn danger">Delete</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section: Confirm Delete Overlay -->
+        <div id="confirm-delete-overlay" class="overlay-panel hidden">
+            <div class="overlay-content" style="text-align: center;">
+                <h2>Confirm Delete</h2>
+                <p class="subtitle" style="margin-bottom: 20px;">Are you sure you want to delete this credential?</p>
+                <div class="flex-actions">
+                    <button id="cancel-delete-btn" class="btn secondary">Cancel</button>
+                    <button id="confirm-delete-btn" class="btn danger">Delete</button>
+                </div>
+                <div id="delete-status" class="status-msg"></div>
+            </div>
+        </div>
+
+        <!-- Section: Add New Credential -->
+        <div id="add-state" class="state-view hidden">
+            <p class="subtitle">No credential found for this site. Save a new one?</p>
+            <div class="form-group">
+                <label for="new-name">Credential Name (e.g. Username)</label>
+                <input type="text" id="new-name" placeholder="Username / Email">
+            </div>
+            <div class="form-group">
+                <label for="new-value">Password</label>
+                <input type="password" id="new-value" placeholder="Password">
+            </div>
+            <button id="save-cred-btn" class="btn primary">Save to Vault</button>
+            <div id="save-status" class="status-msg"></div>
+        </div>
+    </div>
+
+    <script src="vault-access.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html>
