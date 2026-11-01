@@ -24,7 +24,10 @@ void sdcard_init(void)
     // Mount the SD Card
     // First arg: Mount point "/sdcard"
     // Second arg: true = 1-bit mode (Required for your hardware)
-    if (!SD_MMC.begin(SD_MOUNT_POINT, true)) {
+    // Third arg: false = format_if_mount_failed
+    // Fourth arg: 20000 = freq (20MHz)
+    // Fifth arg: 16 = maxOpenFiles (avoids 500 Internal Server Error when browsers fetch web assets in parallel)
+    if (!SD_MMC.begin(SD_MOUNT_POINT, true, false, 20000, 16)) {
         Serial.println("Card Mount Failed");
         _card_mounted = false;
         return;

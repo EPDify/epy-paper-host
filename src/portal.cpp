@@ -422,10 +422,10 @@ void Portal::_listDirRecursive(const char *dirname, String &json, bool &first) {
   closedir(dir);
 }
 
-String Portal::_listFiles() {
+String Portal::_listFiles(const String &rootPath) {
   String json = "[";
   bool first = true;
-  _listDirRecursive(SD_MOUNT_POINT, json, first);
+  _listDirRecursive(rootPath.c_str(), json, first);
   json += "]";
   return json;
 }
@@ -460,7 +460,14 @@ void Portal::_deleteRecursive(String path) {
 // --- Route Handlers ---
 
 void Portal::_handleListFiles(AsyncWebServerRequest *request) {
-  String content = _listFiles();
+  String rootPath = SD_MOUNT_POINT;
+  if (request->hasParam("fullPath")) {
+    String param = request->getParam("fullPath")->value();
+    if (param.length() > 0 && param.startsWith(SD_MOUNT_POINT)) {
+      rootPath = param;
+    }
+  }
+  String content = _listFiles(rootPath);
   request->send(200, "application/json", content);
 }
 

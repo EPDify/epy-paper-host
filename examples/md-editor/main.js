@@ -1,5 +1,6 @@
 // System Interactions & DOM Elements
 const editorEl = document.getElementById('editor-textarea');
+const previewPanel = document.getElementById('preview-panel');
 const previewEl = document.getElementById('preview-content');
 const mainWrapper = document.getElementById('main-wrapper');
 const emptyState = document.getElementById('empty-state');
@@ -70,12 +71,84 @@ async function initEditor() {
   setupDragAndDrop();
 }
 
+// Synchronized Scrolling Engine
+let isSyncingScroll = false;
+let activeScrollSource = null; // 'editor' | 'preview' | null
+let scrollReleaseTimer = null;
+
+function syncPreviewFromEditor() {
+  if (isSyncingScroll) return;
+  if (!mainWrapper.classList.contains('view-split')) return;
+  if (activeScrollSource && activeScrollSource !== 'editor') return;
+
+  activeScrollSource = 'editor';
+  clearTimeout(scrollReleaseTimer);
+  scrollReleaseTimer = setTimeout(() => { activeScrollSource = null; }, 150);
+
+  const maxEditor = editorEl.scrollHeight - editorEl.clientHeight;
+  const maxPreview = previewPanel.scrollHeight - previewPanel.clientHeight;
+  if (maxEditor <= 0 || maxPreview <= 0) return;
+
+  isSyncingScroll = true;
+  const ratio = editorEl.scrollTop / maxEditor;
+  previewPanel.scrollTop = Math.round(ratio * maxPreview);
+  requestAnimationFrame(() => {
+    isSyncingScroll = false;
+  });
+}
+
+function syncEditorFromPreview() {
+  if (isSyncingScroll) return;
+  if (!mainWrapper.classList.contains('view-split')) return;
+  if (activeScrollSource && activeScrollSource !== 'preview') return;
+
+  activeScrollSource = 'preview';
+  clearTimeout(scrollReleaseTimer);
+  scrollReleaseTimer = setTimeout(() => { activeScrollSource = null; }, 150);
+
+  const maxEditor = editorEl.scrollHeight - editorEl.clientHeight;
+  const maxPreview = previewPanel.scrollHeight - previewPanel.clientHeight;
+  if (maxEditor <= 0 || maxPreview <= 0) return;
+
+  isSyncingScroll = true;
+  const ratio = previewPanel.scrollTop / maxPreview;
+  editorEl.scrollTop = Math.round(ratio * maxEditor);
+  requestAnimationFrame(() => {
+    isSyncingScroll = false;
+  });
+}
+
+// Track user pointer / focus to assign scroll driver
+editorEl.addEventListener('mouseenter', () => { activeScrollSource = 'editor'; });
+editorEl.addEventListener('touchstart', () => { activeScrollSource = 'editor'; }, { passive: true });
+editorEl.addEventListener('focus', () => { activeScrollSource = 'editor'; });
+
+previewPanel.addEventListener('mouseenter', () => { activeScrollSource = 'preview'; });
+previewPanel.addEventListener('touchstart', () => { activeScrollSource = 'preview'; }, { passive: true });
+
+// Attach passive scroll listeners
+editorEl.addEventListener('scroll', syncPreviewFromEditor, { passive: true });
+previewPanel.addEventListener('scroll', syncEditorFromPreview, { passive: true });
+
+// Keep preview synchronized when markdown rendering changes content dimensions
+if (window.ResizeObserver) {
+  const ro = new ResizeObserver(() => {
+    if (mainWrapper.classList.contains('view-split') && activeScrollSource === 'editor') {
+      syncPreviewFromEditor();
+    }
+  });
+  ro.observe(previewEl);
+}
+
 // Markdown Parser & Sanitizer
 function updatePreview() {
   const rawText = editorEl.value || '';
   const rawHtml = marked.parse(rawText);
   const cleanHtml = DOMPurify.sanitize(rawHtml);
   previewEl.innerHTML = cleanHtml;
+  if (mainWrapper.classList.contains('view-split') && activeScrollSource === 'editor') {
+    syncPreviewFromEditor();
+  }
 }
 
 // UI Updates based on state
@@ -94,10 +167,30 @@ function updateUIState(isRemote) {
 }
 
 // Switch between Source, Split, Preview Modes
+let currentMode = 'split';
+
 function setMode(mode) {
+  const prevMode = currentMode;
+  currentMode = mode;
+
   document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
   document.querySelectorAll(`.mode-${mode}`).forEach(b => b.classList.add('active'));
-  mainWrapper.className = `flex-1 flex w-full relative bg-white view-${mode}`;
+  mainWrapper.className = `flex-1 flex w-full relative bg-white overflow-hidden min-h-0 view-${mode}`;
+
+  // Synchronize vertical scroll position across mode transitions
+  requestAnimationFrame(() => {
+    const maxEditor = editorEl.scrollHeight - editorEl.clientHeight;
+    const maxPreview = previewPanel.scrollHeight - previewPanel.clientHeight;
+    if (maxEditor > 0 && maxPreview > 0) {
+      if (mode === 'preview') {
+        const ratio = editorEl.scrollTop / maxEditor;
+        previewPanel.scrollTop = Math.round(ratio * maxPreview);
+      } else if (prevMode === 'preview' && (mode === 'split' || mode === 'source')) {
+        const ratio = previewPanel.scrollTop / maxPreview;
+        editorEl.scrollTop = Math.round(ratio * maxEditor);
+      }
+    }
+  });
 }
 
 // Initial Empty State Handler

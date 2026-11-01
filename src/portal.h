@@ -42,7 +42,7 @@ private:
     String _humanReadableSize(const uint64_t bytes);
     void _deleteRecursive(String path);
     void _listDirRecursive(const char * dirname, String &json, bool &first);
-    String _listFiles();
+    String _listFiles(const String &rootPath);
     String _processor(const String& var);
 
     // Request Handlers
