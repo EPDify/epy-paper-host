@@ -16,7 +16,7 @@ const MergeManager = (() => {
 
         for (const file of pdfFiles) {
             try {
-                const srcDoc = await PDFLib.PDFDocument.load(file.data);
+                const srcDoc = await PDFLib.PDFDocument.load(file.data, { ignoreEncryption: true });
                 const copiedPages = await mergedDoc.copyPages(srcDoc, srcDoc.getPageIndices());
                 copiedPages.forEach(page => mergedDoc.addPage(page));
             } catch (err) {
@@ -30,7 +30,6 @@ const MergeManager = (() => {
 
     /**
      * Append pages from additional PDFs to the current document.
-     * This re-loads the entire merged document in the viewer.
      * @param {ArrayBuffer} currentPdfBytes
      * @param {Array<{name: string, data: ArrayBuffer}>} additionalFiles
      * @returns {Promise<ArrayBuffer>}
@@ -42,172 +41,16 @@ const MergeManager = (() => {
 
     return { mergePDFs, appendFiles };
 })();
+
 /**
  * PDF Editor -- Export
- * Serialize annotations into pdf-lib document, download, and upload.
+ * Burns annotations, embeds images, applies form field values, updates
+ * document metadata, and exports or uploads the resulting PDF.
  */
 const ExportManager = (() => {
-    /**
-     * Build the final PDF with all annotations burned in.
-     * @returns {Promise<Uint8Array>}
-     */
-    async function buildFinalPDF() {
-        const PDFLib = window.PDFLib;
-        if (!PDFLib) throw new Error('pdf-lib not loaded');
-
-        const currentBytes = PDFViewer.getPdfBytes();
-        if (!currentBytes) throw new Error('No PDF loaded');
-
-        const pdfDoc = await PDFLib.PDFDocument.load(currentBytes);
-        const pdfPages = pdfDoc.getPages();
-        const zoom = PDFViewer.getZoom();
-        const annotations = AnnotationManager.getAllAnnotations();
-
-        // Burn annotations (text, shapes, drawn paths) into the PDF
-        for (const [pageNumStr, objects] of Object.entries(annotations)) {
-            const pageIndex = parseInt(pageNumStr) - 1;
-            if (pageIndex < 0 || pageIndex >= pdfPages.length) continue;
-
-            const page = pdfPages[pageIndex];
-            const { height: pageHeight } = page.getSize();
-
-            for (const obj of objects) {
-                if (obj.annotationType === 'redact') continue; // handled separately
-                if (obj.annotationType === 'highlight') {
-                    // Semi-transparent yellow rectangle
-                    const scaleX = obj.scaleX || 1;
-                    const scaleY = obj.scaleY || 1;
-                    const pdfX = obj.left / zoom;
-                    const pdfY = pageHeight - (obj.top / zoom) - (obj.height * scaleY / zoom);
-                    page.drawRectangle({
-                        x: pdfX,
-                        y: pdfY,
-                        width: (obj.width * scaleX) / zoom,
-                        height: (obj.height * scaleY) / zoom,
-                        color: PDFLib.rgb(0.99, 0.80, 0.43),
-                        opacity: 0.35,
-                    });
-                } else if (obj.annotationType === 'text' || obj.type === 'textbox') {
-                    const pdfX = obj.left / zoom;
-                    const pdfY = pageHeight - (obj.top / zoom) - (obj.fontSize / zoom);
-                    const color = hexToRgb(obj.fill || '#000000');
-                    try {
-                        const font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
-                        page.drawText(obj.text || '', {
-                            x: pdfX,
-                            y: pdfY,
-                            size: (obj.fontSize || 16) / zoom,
-                            font,
-                            color: PDFLib.rgb(color.r, color.g, color.b),
-                        });
-                    } catch (e) {
-                        // Fallback if font embed fails
-                        console.warn('Font embed failed:', e);
-                    }
-                } else if (obj.type === 'rect' && obj.annotationType === 'shape') {
-                    const scaleX = obj.scaleX || 1;
-                    const scaleY = obj.scaleY || 1;
-                    const pdfX = obj.left / zoom;
-                    const pdfY = pageHeight - (obj.top / zoom) - (obj.height * scaleY / zoom);
-                    const strokeColor = hexToRgb(obj.stroke || '#6c5ce7');
-                    page.drawRectangle({
-                        x: pdfX,
-                        y: pdfY,
-                        width: (obj.width * scaleX) / zoom,
-                        height: (obj.height * scaleY) / zoom,
-                        borderColor: PDFLib.rgb(strokeColor.r, strokeColor.g, strokeColor.b),
-                        borderWidth: (obj.strokeWidth || 2) / zoom,
-                        color: undefined,
-                        opacity: obj.opacity || 1,
-                    });
-                }
-                // Freehand paths are complex; we rasterize them using a canvas approach
-            }
-        }
-
-        // Apply redactions (permanent black rects)
-        const redactionRects = RedactionManager.getRedactionRects();
-        RedactionManager.applyRedactions(pdfDoc, redactionRects, zoom);
-
-        // Handle page rotations
-        const pages = PDFViewer.getPages();
-        for (const pg of pages) {
-            if (pg.rotation && pg.pdfPage) {
-                const pageIndex = pg.pageNum - 1;
-                if (pageIndex < pdfPages.length) {
-                    const existingRotation = pdfPages[pageIndex].getRotation().angle;
-                    pdfPages[pageIndex].setRotation(PDFLib.degrees(existingRotation + pg.rotation));
-                }
-            }
-        }
-
-        return await pdfDoc.save();
-    }
-
-    /**
-     * Download the final PDF.
-     * @param {string} [filename='edited.pdf']
-     */
-    async function downloadPDF(filename = 'edited.pdf') {
-        try {
-            Utils.showSpinner('Building PDF...');
-            const bytes = await buildFinalPDF();
-            const blob = new Blob([bytes], { type: 'application/pdf' });
-            const url = URL.createObjectURL(blob);
-
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-
-            Utils.hideSpinner();
-            Utils.toast('PDF downloaded successfully', 'success');
-        } catch (err) {
-            Utils.hideSpinner();
-            Utils.toast(`Download failed: ${err.message}`, 'error');
-            console.error(err);
-        }
-    }
-
-    /**
-     * Upload the final PDF to the remote server.
-     * POST /system/upload
-     * @param {string} filePath -- full file path starting with /sdcard
-     */
-    async function uploadPDF(filePath) {
-        try {
-            Utils.showSpinner('Uploading PDF...');
-            const bytes = await buildFinalPDF();
-            const blob = new Blob([bytes], { type: 'application/pdf' });
-
-            const formData = new FormData();
-            formData.append('file', blob, filePath);
-
-            const url = '/system/upload';
-            const response = await fetch(url, {
-                method: 'POST',
-                body: formData,
-            });
-
-            Utils.hideSpinner();
-
-            if (!response.ok) {
-                throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
-            }
-
-            Utils.toast('PDF uploaded successfully!', 'success');
-        } catch (err) {
-            Utils.hideSpinner();
-            Utils.toast(`Upload failed: ${err.message}`, 'error');
-            console.error(err);
-        }
-    }
-
     /** Convert hex color to {r, g, b} in 0-1 range */
     function hexToRgb(hex) {
+        if (!hex || hex === 'transparent') return { r: 0, g: 0, b: 0 };
         hex = hex.replace('#', '');
         if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
         const num = parseInt(hex, 16);
@@ -218,27 +61,469 @@ const ExportManager = (() => {
         };
     }
 
-    return { buildFinalPDF, downloadPDF, uploadPDF };
+    /**
+     * Render Fabric freehand draw paths for a page onto an offscreen canvas
+     * and embed as a transparent PNG in the PDF document.
+     */
+    async function burnFreehandDrawings(page, pg, doc, drawObjects, totalRot) {
+        if (!drawObjects.length) return;
+        const box = pg.box;
+        const scale = 2; // 2x resolution for high quality rendering
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(box.w * scale));
+        canvas.height = Math.max(1, Math.round(box.h * scale));
+        const ctx = canvas.getContext('2d');
+        ctx.scale(scale, scale);
+
+        // Fabric paths are in display space; transform canvas so paths draw into unrotated PDF user space
+        // Display space has origin at top-left of displayed page.
+        // We set up a coordinate transform from display space to PDF user space (top-left origin).
+        const { w: dw, h: dh } = Geometry.displaySize(box, totalRot);
+        const normRot = Geometry.norm(totalRot);
+
+        ctx.save();
+        switch (normRot) {
+            case 90:
+                ctx.translate(box.w, 0);
+                ctx.rotate(Math.PI / 2);
+                break;
+            case 180:
+                ctx.translate(box.w, box.h);
+                ctx.rotate(Math.PI);
+                break;
+            case 270:
+                ctx.translate(0, box.h);
+                ctx.rotate(-Math.PI / 2);
+                break;
+        }
+
+        // Render each freehand path
+        for (const obj of drawObjects) {
+            obj.render(ctx);
+        }
+        ctx.restore();
+
+        const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+        if (!blob) return;
+        const arrayBuf = await blob.arrayBuffer();
+        const embeddedImg = await doc.embedPng(arrayBuf);
+        page.drawImage(embeddedImg, {
+            x: box.x,
+            y: box.y,
+            width: box.w,
+            height: box.h,
+        });
+    }
+
+    /**
+     * Build the final PDF with all data fields, metadata and annotations burned in.
+     * @returns {Promise<Uint8Array>}
+     */
+    async function buildFinalPDF() {
+        const PDFLib = window.PDFLib;
+        if (!PDFLib) throw new Error('pdf-lib not loaded');
+
+        const currentBytes = PDFViewer.getPdfBytes();
+        if (!currentBytes) throw new Error('No PDF loaded');
+
+        const viewerPages = PDFViewer.getPages();
+        if (!viewerPages.length) throw new Error('Document has no pages');
+
+        // Check if redaction rectangles exist
+        const redactionCount = AnnotationManager.countRedactions();
+        if (redactionCount > 0) {
+            Utils.toast(`Applying ${redactionCount} permanent redaction(s)`, 'info');
+        }
+
+        // Load source document
+        let doc = await PDFLib.PDFDocument.load(currentBytes, { ignoreEncryption: true });
+        const originalPageCount = doc.getPageCount();
+
+        // Check page structure changes
+        const isCleanOriginal = viewerPages.length === originalPageCount &&
+            viewerPages.every((p, i) => p.srcIndex === i);
+
+        const onlyDeletions = !isCleanOriginal &&
+            viewerPages.every(p => p.srcIndex !== null && p.srcIndex !== undefined) &&
+            viewerPages.every((p, i) => i === 0 || p.srcIndex > viewerPages[i - 1].srcIndex);
+
+        let targetDoc = doc;
+        let exportedPages = [];
+
+        function finalizeFormOnDoc(td) {
+            const injectDisableHighlight = () => {
+                try {
+                    const { PDFName, PDFString, PDFDict } = PDFLib;
+                    const jsAction = td.context.obj({
+                        Type: 'Action',
+                        S: 'JavaScript',
+                        JS: PDFString.of('try { app.runtimeHighlight = false; } catch(_) {}'),
+                    });
+                    const existingOpenAction = td.catalog.lookup(PDFName.of('OpenAction'));
+                    if (!existingOpenAction) {
+                        td.catalog.set(PDFName.of('OpenAction'), jsAction);
+                    } else if (existingOpenAction instanceof PDFDict) {
+                        jsAction.set(PDFName.of('Next'), existingOpenAction);
+                        td.catalog.set(PDFName.of('OpenAction'), jsAction);
+                    }
+                } catch (e) {
+                    console.warn('Could not add disable-highlight OpenAction', e);
+                }
+            };
+
+            if (FormManager.getFlattenOption()) {
+                try {
+                    td.getForm().flatten({ updateFieldAppearances: false });
+                } catch (e) {
+                    console.warn('Form flatten failed, attempting read-only lock fallback', e);
+                    try {
+                        td.getForm().getFields().forEach(f => {
+                            try { f.enableReadOnly(); } catch (_) {}
+                        });
+                    } catch (_) {}
+                    injectDisableHighlight();
+                }
+            } else {
+                // Form is left interactive: inject document JavaScript to disable Acrobat runtime highlighting
+                injectDisableHighlight();
+            }
+        }
+
+        let regularFont = null;
+        let boldFont = null;
+
+        if (isCleanOriginal) {
+            // Apply form field edits directly
+            exportedPages = targetDoc.getPages();
+            try {
+                regularFont = await targetDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+                boldFont = await targetDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+            } catch (e) {
+                console.warn('Font embedding failed', e);
+            }
+            await FormManager.applyToDocument(targetDoc, { exportedPages, viewerPages, regularFont, boldFont });
+            finalizeFormOnDoc(targetDoc);
+        } else if (onlyDeletions) {
+            // Remove deleted pages in reverse order
+            const keptIndexes = new Set(viewerPages.map(p => p.srcIndex));
+            for (let i = originalPageCount - 1; i >= 0; i--) {
+                if (!keptIndexes.has(i)) {
+                    targetDoc.removePage(i);
+                }
+            }
+            exportedPages = targetDoc.getPages();
+            FormManager.removeOrphanFields(targetDoc, keptIndexes);
+            try {
+                regularFont = await targetDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+                boldFont = await targetDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+            } catch (e) {
+                console.warn('Font embedding failed', e);
+            }
+            await FormManager.applyToDocument(targetDoc, { exportedPages, viewerPages, regularFont, boldFont });
+            finalizeFormOnDoc(targetDoc);
+        } else {
+            // Complex page structure change: pages reordered or blank pages inserted
+            // First apply form field edits to source doc and flatten so data isn't lost during page copy
+            let srcRegularFont = null;
+            let srcBoldFont = null;
+            try {
+                srcRegularFont = await doc.embedFont(PDFLib.StandardFonts.Helvetica);
+                srcBoldFont = await doc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+            } catch (e) {}
+            await FormManager.applyToDocument(doc, { exportedPages: doc.getPages(), viewerPages: PDFViewer.getAllPages(), regularFont: srcRegularFont, boldFont: srcBoldFont });
+            if (FormManager.getFieldCount() > 0) {
+                try { doc.getForm().flatten({ updateFieldAppearances: false }); } catch (e) { console.warn('Form flatten failed', e); }
+            }
+
+            // Create fresh destination document
+            targetDoc = await PDFLib.PDFDocument.create();
+            const sourcePages = doc.getPages();
+
+            for (let i = 0; i < viewerPages.length; i++) {
+                const pg = viewerPages[i];
+                if (pg.srcIndex !== null && pg.srcIndex !== undefined && pg.srcIndex < sourcePages.length) {
+                    const [copied] = await targetDoc.copyPages(doc, [pg.srcIndex]);
+                    targetDoc.addPage(copied);
+                    exportedPages.push(copied);
+                } else {
+                    // Blank page
+                    const { w, h } = pg.box;
+                    const blank = targetDoc.addPage([w, h]);
+                    exportedPages.push(blank);
+                }
+            }
+
+            // Apply newly created fields to destination pages
+            try {
+                regularFont = await targetDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+                boldFont = await targetDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+            } catch (e) {
+                console.warn('Font embedding failed', e);
+            }
+            await FormManager.applyToDocument(targetDoc, { exportedPages, viewerPages, regularFont, boldFont });
+            finalizeFormOnDoc(targetDoc);
+        }
+
+        // Apply metadata to target document
+        MetadataManager.applyToDocument(targetDoc);
+
+        // Ensure fonts are embedded for annotations if not done above
+        if (!regularFont) {
+            try {
+                regularFont = await targetDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+            } catch (e) {
+                console.warn('Standard font embed fallback', e);
+            }
+        }
+        if (!boldFont) {
+            try {
+                boldFont = await targetDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+            } catch (_) {}
+        }
+        const standardFont = regularFont;
+
+        // Process each page: rotations and annotations
+        for (let i = 0; i < viewerPages.length; i++) {
+            const pg = viewerPages[i];
+            const pdfPage = exportedPages[i];
+            if (!pdfPage) continue;
+
+            const totalRot = PDFViewer.totalRotation(pg);
+            pdfPage.setRotation(PDFLib.degrees(totalRot));
+
+            const { objects, dispose } = await AnnotationManager.getPageObjects(pg);
+            if (!objects.length) {
+                dispose();
+                continue;
+            }
+
+            const freehandDrawObjects = [];
+
+            for (const obj of objects) {
+                const scaleX = obj.scaleX || 1;
+                const scaleY = obj.scaleY || 1;
+                const objW = (obj.width || 0) * scaleX;
+                const objH = (obj.height || 0) * scaleY;
+                const u1 = obj.left || 0;
+                const v1 = obj.top || 0;
+                const u2 = u1 + objW;
+                const v2 = v1 + objH;
+
+                // Map opposing display corners to PDF user space
+                const p1 = Geometry.displayToPdf(pg.box, totalRot, u1, v1);
+                const p2 = Geometry.displayToPdf(pg.box, totalRot, u2, v2);
+                const minX = Math.min(p1.x, p2.x);
+                const maxX = Math.max(p1.x, p2.x);
+                const minY = Math.min(p1.y, p2.y);
+                const maxY = Math.max(p1.y, p2.y);
+                const rectW = Math.max(1, maxX - minX);
+                const rectH = Math.max(1, maxY - minY);
+
+                if (obj.annotationType === 'redact') {
+                    // Permanent black redaction rectangle
+                    pdfPage.drawRectangle({
+                        x: minX,
+                        y: minY,
+                        width: rectW,
+                        height: rectH,
+                        color: PDFLib.rgb(0, 0, 0),
+                        opacity: 1,
+                    });
+                } else if (obj.annotationType === 'erase') {
+                    // White-out rectangle
+                    pdfPage.drawRectangle({
+                        x: minX,
+                        y: minY,
+                        width: rectW,
+                        height: rectH,
+                        color: PDFLib.rgb(1, 1, 1),
+                        opacity: 1,
+                    });
+                } else if (obj.annotationType === 'highlight') {
+                    // Semi-transparent highlight box
+                    const color = hexToRgb(obj.fill || '#fdcb6e');
+                    pdfPage.drawRectangle({
+                        x: minX,
+                        y: minY,
+                        width: rectW,
+                        height: rectH,
+                        color: PDFLib.rgb(color.r, color.g, color.b),
+                        opacity: 0.35,
+                    });
+                } else if (obj.annotationType === 'shape') {
+                    // Rectangle outline shape
+                    const stroke = hexToRgb(obj.stroke || '#6c5ce7');
+                    pdfPage.drawRectangle({
+                        x: minX,
+                        y: minY,
+                        width: rectW,
+                        height: rectH,
+                        borderColor: PDFLib.rgb(stroke.r, stroke.g, stroke.b),
+                        borderWidth: obj.strokeWidth || 2,
+                        opacity: obj.opacity || 1,
+                    });
+                } else if (obj.annotationType === 'text' || obj.type === 'textbox') {
+                    // Text annotation
+                    const textStr = obj.text || '';
+                    const isBold = obj.fontWeight === 'bold' || obj.fontWeight === 700 || !!obj.bold;
+                    const fontToUse = (isBold && boldFont) ? boldFont : (standardFont || regularFont);
+                    if (textStr.trim() && fontToUse) {
+                        const color = hexToRgb(obj.fill || '#000000');
+                        const fontSize = (obj.fontSize || 12) * scaleY;
+                        // Multiline text handling
+                        const lines = textStr.split('\n');
+                        const lineHeight = fontSize * 1.2;
+                        let textY = maxY - fontSize;
+                        for (const line of lines) {
+                            try {
+                                pdfPage.drawText(line, {
+                                    x: minX,
+                                    y: textY,
+                                    size: fontSize,
+                                    font: fontToUse,
+                                    color: PDFLib.rgb(color.r, color.g, color.b),
+                                });
+                            } catch (e) {
+                                console.warn('Could not render text line:', line, e);
+                            }
+                            textY -= lineHeight;
+                        }
+                    }
+                } else if (obj.annotationType === 'image') {
+                    // Embedded image or signature
+                    try {
+                        const imgEl = obj.getElement ? obj.getElement() : null;
+                        if (imgEl && imgEl.src) {
+                            const res = await fetch(imgEl.src);
+                            const imgBytes = await res.arrayBuffer();
+                            let embedded;
+                            if (imgEl.src.startsWith('data:image/jpeg') || imgEl.src.endsWith('.jpg') || imgEl.src.endsWith('.jpeg')) {
+                                embedded = await targetDoc.embedJpg(imgBytes);
+                            } else {
+                                embedded = await targetDoc.embedPng(imgBytes);
+                            }
+                            pdfPage.drawImage(embedded, {
+                                x: minX,
+                                y: minY,
+                                width: rectW,
+                                height: rectH,
+                            });
+                        }
+                    } catch (e) {
+                        console.warn('Image embedding failed:', e);
+                    }
+                } else if (obj.annotationType === 'draw' || obj.type === 'path') {
+                    freehandDrawObjects.push(obj);
+                }
+            }
+
+            // If there are freehand drawing paths, burn them via high-res canvas
+            if (freehandDrawObjects.length > 0) {
+                await burnFreehandDrawings(pdfPage, pg, targetDoc, freehandDrawObjects, totalRot);
+            }
+
+            dispose();
+        }
+
+        return await targetDoc.save({
+            useObjectStreams: false,
+            updateFieldAppearances: false,
+        });
+    }
+
+    /**
+     * Download the final PDF to the user's computer.
+     * @param {string} [filename='edited.pdf']
+     */
+    async function downloadPDF(filename = 'edited.pdf') {
+        try {
+            Utils.showSpinner('Building PDF document...');
+            const bytes = await buildFinalPDF();
+            const blob = new Blob([bytes], { type: 'application/pdf' });
+            Utils.downloadBlob(blob, filename);
+            Utils.hideSpinner();
+            setDocumentDirty(false);
+            Utils.toast('PDF downloaded successfully', 'success');
+        } catch (err) {
+            Utils.hideSpinner();
+            Utils.toast(`Download failed: ${err.message}`, 'error');
+            console.error(err);
+        }
+    }
+
+    /**
+     * Upload the final PDF to the remote device/server.
+     * POST /system/upload
+     * @param {string} filePath -- full file path on device
+     */
+    async function uploadPDF(filePath) {
+        try {
+            Utils.showSpinner('Uploading PDF to server...');
+            const bytes = await buildFinalPDF();
+            const blob = new Blob([bytes], { type: 'application/pdf' });
+
+            const formData = new FormData();
+            formData.append('file', blob, filePath);
+
+            const response = await fetch('/system/upload', {
+                method: 'POST',
+                body: formData,
+            });
+
+            Utils.hideSpinner();
+
+            if (!response.ok) {
+                throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+            }
+
+            setDocumentDirty(false);
+            Utils.toast('PDF uploaded successfully!', 'success');
+        } catch (err) {
+            Utils.hideSpinner();
+            Utils.toast(`Upload failed: ${err.message}`, 'error');
+            console.error(err);
+        }
+    }
+
+    return { buildFinalPDF, downloadPDF, uploadPDF, hexToRgb };
 })();
+
+// -- Document Dirty State Tracker --
+let isDocDirty = false;
+function setDocumentDirty(dirty) {
+    isDocDirty = dirty;
+    const dirtyDot = document.getElementById('doc-dirty');
+    if (dirtyDot) dirtyDot.hidden = !dirty;
+}
+function checkDocumentDirty() {
+    const dirty = FormManager.hasChanges() ||
+        MetadataManager.hasChanges() ||
+        PDFViewer.getPages().some(p => p.rotation !== 0 || p.json);
+    setDocumentDirty(dirty);
+}
+
 /**
  * PDF Editor -- App Bootstrap
- * Entry point: URL parsing, event wiring, landing <-> editor transition.
+ * Wires URL parsing, tabs, tools, inputs, shortcuts, and lifecycle.
  */
-; (async function App() {
+;(async function App() {
     'use strict';
 
-    // -- State ----------------------------------------------
-    let remoteFilePath = null;  // Set when loaded via ?filePath= param
-    let remoteFolderPath = null;
+    // -- State --
+    let remoteFilePath = null;
     let currentFileName = 'edited.pdf';
+    let spacePressed = false;
+    let prevToolBeforeSpace = null;
 
-    // -- DOM Refs -------------------------------------------
+    // -- DOM Refs --
     const landingPage = document.getElementById('landing-page');
     const editorPage = document.getElementById('editor-page');
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
     const addFileInput = document.getElementById('add-file-input');
+    const imageInput = document.getElementById('image-input');
     const docTitle = document.getElementById('doc-title');
+    const docEncryptedBadge = document.getElementById('doc-encrypted');
 
     const btnDownload = document.getElementById('btn-download');
     const btnUpload = document.getElementById('btn-upload');
@@ -248,36 +533,44 @@ const ExportManager = (() => {
     const btnSidebarToggleHeader = document.getElementById('btn-sidebar-toggle-header');
     const sidebar = document.getElementById('sidebar');
 
-    // Tool buttons
+    // Tool buttons & options
     const toolBtns = document.querySelectorAll('[data-tool]');
     const colorPicker = document.getElementById('opt-color');
     const strokeSelect = document.getElementById('opt-stroke-width');
     const fontSizeSelect = document.getElementById('opt-font-size');
+    const fieldBgSelect = document.getElementById('opt-field-bg');
+    const fieldBgColorInput = document.getElementById('opt-field-bg-color');
+    const eraseSizeSelect = document.getElementById('opt-erase-size');
 
-    // Undo / redo / delete
+    // Undo / redo / delete / zoom
     const btnUndo = document.getElementById('btn-undo');
     const btnRedo = document.getElementById('btn-redo');
     const btnDeleteSel = document.getElementById('btn-delete-selection');
+    const zoomLabel = document.getElementById('zoom-label');
 
-    // Redaction modal
-    const btnRedactConfirm = document.getElementById('modal-redact-confirm');
-    const btnRedactCancel = document.getElementById('modal-redact-cancel');
-    const btnRedactClose = document.getElementById('modal-redact-close');
+    // Sidebar tabs
+    const tabButtons = document.querySelectorAll('.sidebar-tab');
+    const sidebarPanels = document.querySelectorAll('.sidebar-panel');
 
-    // -- URL Parameter Check --------------------------------
-    const filePathParam = Utils.getUrlParam('filePath');
-    if (filePathParam) {
-        // Auto-fetch mode
-        remoteFilePath = decodeURIComponent(filePathParam);
-        remoteFolderPath = Utils.getFolderPath(remoteFilePath);
-        currentFileName = Utils.getFileName(remoteFilePath);
-        await loadRemoteFile(remoteFilePath);
-    } else {
-        // Show landing page
-        showLanding();
+    function switchSidebarTab(panelName) {
+        tabButtons.forEach(btn => {
+            const active = btn.dataset.panel === panelName;
+            btn.classList.toggle('active', active);
+            btn.setAttribute('aria-selected', String(active));
+        });
+        sidebarPanels.forEach(panel => {
+            panel.classList.toggle('active', panel.id === `panel-${panelName}`);
+        });
+        if (sidebar.classList.contains('collapsed')) {
+            sidebar.classList.remove('collapsed');
+        }
     }
 
-    // -- Landing Page ---------------------------------------
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => switchSidebarTab(btn.dataset.panel));
+    });
+
+    // -- Landing <-> Editor Transitions --
     function showLanding() {
         landingPage.style.display = '';
         editorPage.style.display = 'none';
@@ -290,13 +583,68 @@ const ExportManager = (() => {
 
     // Drop zone setup
     PDFLoader.setupDropZone(dropZone, handleLocalFiles);
-
-    // File input
     fileInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) handleLocalFiles(e.target.files);
     });
 
-    // -- File Loading ---------------------------------------
+    // Image file input
+    imageInput?.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+            AnnotationManager.insertImage(e.target.files[0]);
+        }
+        imageInput.value = '';
+    });
+
+    // -- Loading Workflow --
+    async function openPdfData(bytes, filename, isRemote = false) {
+        currentFileName = filename || 'document.pdf';
+        docTitle.textContent = currentFileName;
+        setDocumentDirty(false);
+
+        // Load into viewer
+        await PDFViewer.loadDocument(bytes);
+
+        // Load into pdf-lib to extract form fields and document properties
+        let pdfLibDoc = null;
+        let isEncrypted = false;
+        try {
+            pdfLibDoc = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
+        } catch (e) {
+            console.warn('pdf-lib load warning:', e);
+            if (e.message && e.message.toLowerCase().includes('encrypt')) {
+                isEncrypted = true;
+            }
+        }
+
+        if (docEncryptedBadge) docEncryptedBadge.hidden = !isEncrypted;
+
+        // Parse form fields
+        const fieldCount = FormManager.load(pdfLibDoc);
+
+        // Parse document properties
+        MetadataManager.load(pdfLibDoc, {
+            name: currentFileName,
+            size: bytes.byteLength,
+            version: pdfLibDoc ? `PDF-${pdfLibDoc.context.header?.major || 1}.${pdfLibDoc.context.header?.minor || 7}` : 'PDF-1.7',
+            pages: PDFViewer.getTotalPages(),
+            encrypted: isEncrypted,
+        });
+
+        // Build thumbnail sidebar
+        PageManager.build();
+        History.clear();
+
+        // Switch to fields tab if document has forms, otherwise pages tab
+        if (fieldCount > 0) {
+            switchSidebarTab('fields');
+        } else {
+            switchSidebarTab('pages');
+        }
+
+        PDFViewer.zoomFit();
+        showEditor();
+    }
+
     async function handleLocalFiles(files) {
         try {
             Utils.showSpinner('Reading PDF files...');
@@ -309,20 +657,18 @@ const ExportManager = (() => {
             }
 
             let finalBytes;
+            let name;
             if (pdfFiles.length === 1) {
                 finalBytes = pdfFiles[0].data;
-                currentFileName = pdfFiles[0].name;
+                name = pdfFiles[0].name;
             } else {
-                // Multiple files -> merge
                 Utils.showSpinner('Merging PDF files...');
                 finalBytes = await MergeManager.mergePDFs(pdfFiles);
-                currentFileName = 'merged.pdf';
+                name = 'merged.pdf';
             }
 
-            showEditor();
-            docTitle.textContent = currentFileName;
-            await PDFViewer.loadDocument(finalBytes);
-            PDFViewer.zoomFit();
+            btnUpload.style.display = 'none';
+            await openPdfData(finalBytes, name, false);
             Utils.hideSpinner();
             Utils.toast(`Loaded ${pdfFiles.length} file(s)`, 'success');
         } catch (err) {
@@ -335,15 +681,11 @@ const ExportManager = (() => {
     async function loadRemoteFile(filePath) {
         try {
             Utils.showSpinner('Fetching remote PDF...');
-            showEditor();
             const pdfFile = await PDFLoader.fetchRemoteFile(filePath);
-            currentFileName = pdfFile.name;
-            docTitle.textContent = currentFileName;
-            btnUpload.style.display = ''; // Show upload button for remote files
-            await PDFViewer.loadDocument(pdfFile.data);
-            PDFViewer.zoomFit();
+            btnUpload.style.display = '';
+            await openPdfData(pdfFile.data, pdfFile.name, true);
             Utils.hideSpinner();
-            Utils.toast(`Loaded: ${currentFileName}`, 'success');
+            Utils.toast(`Loaded: ${pdfFile.name}`, 'success');
         } catch (err) {
             Utils.hideSpinner();
             Utils.toast(`Failed to fetch remote file: ${err.message}`, 'error');
@@ -351,25 +693,24 @@ const ExportManager = (() => {
         }
     }
 
-    // -- Add More Files (merge) -----------------------------
+    // Append / Merge additional files
     btnAddFiles?.addEventListener('click', () => addFileInput.click());
     addFileInput?.addEventListener('change', async (e) => {
-        if (e.target.files.length === 0) return;
+        if (!e.target.files.length) return;
         try {
             Utils.showSpinner('Merging additional files...');
             const newFiles = await PDFLoader.readLocalFiles(e.target.files);
-            if (newFiles.length === 0) {
+            if (!newFiles.length) {
                 Utils.hideSpinner();
                 return;
             }
             const currentBytes = PDFViewer.getPdfBytes();
             const mergedBytes = await MergeManager.appendFiles(currentBytes, newFiles);
-            await PDFViewer.loadDocument(mergedBytes);
-            PDFViewer.zoomFit();
-            Utils.hideSpinner();
-            Utils.toast(`Merged ${newFiles.length} additional file(s)`, 'success');
             currentFileName = 'merged.pdf';
-            docTitle.textContent = currentFileName;
+            await openPdfData(mergedBytes, currentFileName, !!remoteFilePath);
+            Utils.hideSpinner();
+            setDocumentDirty(true);
+            Utils.toast(`Merged ${newFiles.length} additional file(s)`, 'success');
         } catch (err) {
             Utils.hideSpinner();
             Utils.toast(`Merge failed: ${err.message}`, 'error');
@@ -377,119 +718,188 @@ const ExportManager = (() => {
         addFileInput.value = '';
     });
 
-    // -- Download / Upload ----------------------------------
+    // Download & Upload actions
     btnDownload?.addEventListener('click', () => ExportManager.downloadPDF(currentFileName));
     btnUpload?.addEventListener('click', () => {
         if (remoteFilePath) {
             ExportManager.uploadPDF(remoteFilePath);
         } else {
-            Utils.toast('No remote file path to upload to', 'warning');
+            Utils.toast('No remote file path configured', 'warning');
         }
     });
 
-    // -- Tool Selection -------------------------------------
+    // Tools
     toolBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             AnnotationManager.setTool(btn.dataset.tool);
         });
     });
 
-    // Default tool
+    // Default tool & tooltips
     AnnotationManager.setTool('select');
+    TooltipManager.init();
 
     // Tool options
     colorPicker?.addEventListener('input', (e) => AnnotationManager.setColor(e.target.value));
     strokeSelect?.addEventListener('change', (e) => AnnotationManager.setStrokeWidth(e.target.value));
     fontSizeSelect?.addEventListener('change', (e) => AnnotationManager.setFontSize(e.target.value));
+    document.getElementById('btn-field-bold')?.addEventListener('click', () => AnnotationManager.toggleBold?.());
+    eraseSizeSelect?.addEventListener('change', (e) => AnnotationManager.setEraseSize(e.target.value));
 
-    // Undo / Redo / Delete
-    btnUndo?.addEventListener('click', () => AnnotationManager.undo());
-    btnRedo?.addEventListener('click', () => AnnotationManager.redo());
-    btnDeleteSel?.addEventListener('click', () => AnnotationManager.deleteSelected());
-
-    // -- Redaction Modal ------------------------------------
-    // Trigger modal when user clicks the redact tool and there are existing redaction rects
-    document.getElementById('tool-redact')?.addEventListener('dblclick', () => {
-        const rects = RedactionManager.getRedactionRects();
-        if (Object.keys(rects).length > 0) {
-            Utils.openModal('modal-redact');
+    let prevToolbarBg = 'transparent';
+    fieldBgSelect?.addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (val === 'custom') {
+            fieldBgColorInput?.click();
+        } else {
+            prevToolbarBg = val;
+            AnnotationManager.setFieldBg(val);
         }
     });
 
-    btnRedactConfirm?.addEventListener('click', async () => {
-        Utils.closeModal('modal-redact');
-        RedactionManager.clearRedactionObjects();
-        Utils.toast('Redactions will be permanently applied on export', 'warning');
+    fieldBgColorInput?.addEventListener('input', (e) => {
+        const col = e.target.value;
+        prevToolbarBg = col;
+        if (typeof syncBgSelect === 'function') syncBgSelect(fieldBgSelect, col);
+        AnnotationManager.setFieldBg(col);
     });
 
-    btnRedactCancel?.addEventListener('click', () => Utils.closeModal('modal-redact'));
-    btnRedactClose?.addEventListener('click', () => Utils.closeModal('modal-redact'));
+    fieldBgColorInput?.addEventListener('cancel', () => {
+        if (fieldBgSelect.value === 'custom') {
+            if (typeof syncBgSelect === 'function') syncBgSelect(fieldBgSelect, prevToolbarBg);
+        }
+    });
 
+    document.getElementById('opt-field-type')?.addEventListener('change', () => {
+        if (AnnotationManager.getActiveTool() !== 'field') {
+            AnnotationManager.setTool('field');
+        }
+    });
+
+    // Undo / Redo / Delete / Zoom reset
+    btnUndo?.addEventListener('click', () => History.undo());
+    btnRedo?.addEventListener('click', () => History.redo());
+    btnDeleteSel?.addEventListener('click', () => AnnotationManager.deleteSelected());
+    zoomLabel?.addEventListener('click', () => PDFViewer.setZoom(1.0));
+
+    // Sidebar toggles
     function toggleSidebar() {
         sidebar.classList.toggle('collapsed');
     }
     btnSidebarToggle?.addEventListener('click', toggleSidebar);
     btnSidebarToggleHeader?.addEventListener('click', toggleSidebar);
 
-    // -- Theme Toggle --------------------------------------
-    // Detect system preference
+    // Theme toggle
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'dark');
-
     btnTheme?.addEventListener('click', () => {
         const html = document.documentElement;
         const current = html.getAttribute('data-theme');
         html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
     });
 
-    // -- Keyboard Shortcuts --------------------------------
+    // Track document changes
+    document.addEventListener('pdfeditor:changed', () => setDocumentDirty(true));
+
+    // Prompt user before losing unsaved changes
+    window.addEventListener('beforeunload', (e) => {
+        if (isDocDirty) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+
+    // Keyboard Shortcuts
     document.addEventListener('keydown', (e) => {
-        // Ignore when typing in input fields
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+        // Spacebar hand-pan toggle
+        if (e.code === 'Space' && !spacePressed && !Utils.isEditableTarget(e.target) && !AnnotationManager.isEditingText()) {
+            spacePressed = true;
+            prevToolBeforeSpace = AnnotationManager.getActiveTool();
+            AnnotationManager.setTool('hand');
+            e.preventDefault();
+            return;
+        }
+
+        if (Utils.isEditableTarget(e.target) || AnnotationManager.isEditingText()) {
+            if (e.key === 'Escape') e.target.blur();
+            return;
+        }
 
         const ctrl = e.ctrlKey || e.metaKey;
 
-        if (ctrl && e.key === 'z') {
+        if (ctrl && e.key.toLowerCase() === 'z') {
             e.preventDefault();
-            AnnotationManager.undo();
-        } else if (ctrl && (e.key === 'y' || (e.shiftKey && e.key === 'Z'))) {
+            if (e.shiftKey) History.redo();
+            else History.undo();
+        } else if (ctrl && e.key.toLowerCase() === 'y') {
             e.preventDefault();
-            AnnotationManager.redo();
-        } else if (ctrl && e.key === 's') {
+            History.redo();
+        } else if (ctrl && e.key.toLowerCase() === 's') {
             e.preventDefault();
             ExportManager.downloadPDF(currentFileName);
+        } else if (ctrl && e.key.toLowerCase() === 'b') {
+            e.preventDefault();
+            AnnotationManager.toggleBold?.();
+        } else if (ctrl && e.key.toLowerCase() === 'c') {
+            if (AnnotationManager.copy()) e.preventDefault();
+        } else if (ctrl && e.key.toLowerCase() === 'v') {
+            if (AnnotationManager.paste()) e.preventDefault();
         } else if (e.key === 'Delete' || e.key === 'Backspace') {
-            if (AnnotationManager.getActiveTool() === 'select') {
+            if (AnnotationManager.hasSelection()) {
+                e.preventDefault();
                 AnnotationManager.deleteSelected();
             }
-        } else if (e.key === 'v' || e.key === 'V') {
-            if (!ctrl) AnnotationManager.setTool('select');
-        } else if (e.key === 'h' || e.key === 'H') {
+        } else if (!ctrl && (e.key === 'v' || e.key === 'V')) {
+            AnnotationManager.setTool('select');
+        } else if (!ctrl && (e.key === 'h' || e.key === 'H')) {
             AnnotationManager.setTool('hand');
-        } else if (e.key === 't' || e.key === 'T') {
+        } else if (!ctrl && (e.key === 't' || e.key === 'T')) {
             AnnotationManager.setTool('text');
-        } else if (e.key === 'd' || e.key === 'D') {
+        } else if (!ctrl && (e.key === 'f' || e.key === 'F')) {
+            AnnotationManager.setTool('field');
+        } else if (!ctrl && (e.key === 'd' || e.key === 'D')) {
             AnnotationManager.setTool('draw');
-        } else if (e.key === 'l' || e.key === 'L') {
+        } else if (!ctrl && (e.key === 'l' || e.key === 'L')) {
             AnnotationManager.setTool('highlight');
-        } else if (e.key === 'r' || e.key === 'R') {
+        } else if (!ctrl && (e.key === 'i' || e.key === 'I')) {
+            AnnotationManager.setTool('image');
+            imageInput?.click();
+        } else if (!ctrl && (e.key === 'r' || e.key === 'R')) {
             AnnotationManager.setTool('redact');
-        } else if (e.key === 's' || e.key === 'S') {
-            if (!ctrl) AnnotationManager.setTool('shape');
+        } else if (!ctrl && (e.key === 's' || e.key === 'S')) {
+            AnnotationManager.setTool('shape');
+        } else if (!ctrl && (e.key === 'e' || e.key === 'E')) {
+            AnnotationManager.setTool('erase');
         } else if (e.key === '+' || e.key === '=') {
             PDFViewer.zoomIn();
         } else if (e.key === '-') {
             PDFViewer.zoomOut();
-        } else if (e.key === 'ArrowLeft') {
-            PDFViewer.scrollToPage(PDFViewer.getCurrentPage() - 1);
-        } else if (e.key === 'ArrowRight') {
-            PDFViewer.scrollToPage(PDFViewer.getCurrentPage() + 1);
+        } else if (e.key === '0') {
+            PDFViewer.zoomFit();
+        } else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+            const delta = e.shiftKey ? 10 : 1;
+            const dx = e.key === 'ArrowLeft' ? -delta : e.key === 'ArrowRight' ? delta : 0;
+            const dy = e.key === 'ArrowUp' ? -delta : e.key === 'ArrowDown' ? delta : 0;
+            if (AnnotationManager.nudge(dx, dy)) e.preventDefault();
         }
     });
 
-    // -- Close context menu on click elsewhere -------------
-    document.addEventListener('click', () => {
-        document.querySelectorAll('.context-menu').forEach(el => el.remove());
+    document.addEventListener('keyup', (e) => {
+        if (e.code === 'Space' && spacePressed) {
+            spacePressed = false;
+            if (prevToolBeforeSpace) {
+                AnnotationManager.setTool(prevToolBeforeSpace);
+                prevToolBeforeSpace = null;
+            }
+        }
     });
 
+    // Check URL parameters for remote file load
+    const filePathParam = Utils.getUrlParam('filePath');
+    if (filePathParam) {
+        remoteFilePath = decodeURIComponent(filePathParam);
+        await loadRemoteFile(remoteFilePath);
+    } else {
+        showLanding();
+    }
 })();
