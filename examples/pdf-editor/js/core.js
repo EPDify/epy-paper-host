@@ -334,8 +334,9 @@ const PDFLoader = (() => {
      * @returns {Promise<{name: string, data: ArrayBuffer}>}
      */
     async function fetchRemoteFile(filePath) {
+        PDFSecurity.validateFilePath(filePath);
         const url = `/system/file?action=download&name=${encodeURIComponent(filePath)}`;
-        const response = await fetch(url);
+        const response = await fetch(url, { mode: 'same-origin', redirect: 'error' });
         if (!response.ok) {
             throw new Error(`Failed to fetch remote file: ${response.status} ${response.statusText}`);
         }
@@ -482,7 +483,7 @@ const PDFViewer = (() => {
         pdfBytes = data.slice(0);
 
         // pdf.js transfers the buffer to its worker, so always hand it a copy
-        const loadingTask = lib.getDocument({ data: new Uint8Array(data.slice(0)) });
+        const loadingTask = PDFSecurity.createLoadingTask(data);
         loadingTask.onPassword = (updatePassword, reason) => {
             const msg = reason === lib.PasswordResponses.INCORRECT_PASSWORD
                 ? 'Incorrect password. Please try again:'
@@ -991,9 +992,10 @@ const TooltipManager = (() => {
 
         const match = text.match(/^(.*?)\s*\(([^)]+)\)$/);
         if (match) {
-            const label = Utils.escapeHtml(match[1]);
-            const kbd = Utils.escapeHtml(match[2]);
-            tooltipEl.innerHTML = `<span>${label}</span><kbd class="tooltip-kbd">${kbd}</kbd>`;
+            tooltipEl.replaceChildren(
+                Utils.el('span', { text: match[1] }),
+                Utils.el('kbd', { className: 'tooltip-kbd', text: match[2] }),
+            );
         } else {
             tooltipEl.textContent = text;
         }

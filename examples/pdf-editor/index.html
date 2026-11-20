@@ -3,6 +3,8 @@
 
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js; worker-src 'self' blob:; connect-src 'self' blob:; img-src 'self' blob: data:; font-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; base-uri 'none'; object-src 'none'; form-action 'none'" />
+  <meta name="referrer" content="no-referrer" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PDF Editor — Edit, Fill, Merge &amp; Redact PDFs</title>
   <meta name="description"
@@ -124,7 +126,7 @@
           </div>
           <span id="doc-title" class="app-header__title">PDF Editor</span>
           <span id="doc-dirty" class="doc-dirty" title="Unsaved changes" hidden></span>
-          <span id="doc-encrypted" class="doc-badge" title="This PDF is encrypted. Some edits may not be saved correctly." hidden>Encrypted</span>
+          <span id="doc-encrypted" class="doc-badge" title="Encrypted PDFs can be viewed, but cannot be exported or merged. Decrypt a copy first." hidden>Encrypted</span>
         </div>
         <div class="app-header__actions">
           <button class="action-btn action-btn--secondary" id="btn-add-files" data-tooltip="Add more PDFs to merge" data-tooltip-pos="bottom">
@@ -330,7 +332,7 @@
             <div class="toolbar__separator"></div>
 
             <div class="toolbar__group">
-              <button class="tool-btn" id="tool-redact" data-tooltip="Redact blackout (R)" data-tool="redact" data-tooltip-pos="bottom">
+              <button class="tool-btn" id="tool-redact" data-tooltip="Redact — export flattens all pages and removes metadata (R)" data-tool="redact" data-tooltip-pos="bottom">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                   stroke-linejoin="round">
                   <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -537,6 +539,7 @@
   <input type="file" id="image-input" accept="image/*" style="display:none;" />
 
   <!-- =============== SCRIPTS =============== -->
+  <script src="js/security.js"></script>
   <script src="js/core.js"></script>
   <script src="js/editor.js"></script>
   <script src="js/app-bundle.js"></script>

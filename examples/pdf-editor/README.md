@@ -34,7 +34,9 @@ This robust Single Page Application (SPA) allows you to edit data fields, fill f
   - Insert images and digital signatures (PNG, JPEG, WebP, etc.) with automatic scaling and placement.
   - Draw rectangle shapes with customizable border widths and colors.
 - **Secure Redaction:**
-  - Selectively redact and permanently scrub sensitive information from your documents using the Redact tool. Once redactions are applied and exported, restricted content is burned as solid vector black rectangles and cannot be recovered by viewers.
+  - The Redact tool exports a new, image-only PDF. All pages are rasterized, redaction areas are masked in opaque black after rendering, and only the masked pixels are embedded. Original text, form values, attachments, hidden objects, and source metadata are not copied to the output.
+  - Redacted exports lose searchable text, editable forms, links, and vector quality. Rendering uses up to 2× resolution, capped at 16 megapixels and 8192 pixels per side. Rotated redaction boxes cover their entire bounding rectangle. Review the exported PDF before sharing; sensitive information outside the marked areas remains visible.
+  - White-out and highlight are visual annotations, **not redaction**. The original file and the editor's undo history remain unchanged by downloading a redacted copy.
 - **Merge & Combine:**
   - Load single or multiple PDFs simultaneously to merge them into one seamless document.
   - Append additional PDF files directly into the active document.
@@ -56,4 +58,25 @@ This robust Single Page Application (SPA) allows you to edit data fields, fill f
 
 - **Drag & Drop Workflow:** Open the web app and drag one or more PDF files onto the interface to get started immediately.
 - **Download:** Once your edits are complete, click **Download** to save the modified PDF to your local computer.
-- **File Manager Mode:** If the PDF is opened from the EPY Paper Host File Manager (via `?filePath=...`), the editor automatically loads the document from the server. Clicking **Upload** saves modifications directly back to the device.
+- **File Manager Mode:** If the PDF is opened from the EPY Paper Host File Manager (via `?filePath=...`), the editor automatically loads the document from the server. Paths must be absolute `.pdf` paths under `/sdcard/`, with no empty, `.` or `..` segments, backslashes, or control characters. Encode the path once with `encodeURIComponent`. Clicking **Upload** saves modifications directly back to the device.
+
+## Security review and boundaries
+
+- **High: PDF.js script execution.** The pinned PDF.js 3.11.174 is affected by [CVE-2024-4367](https://github.com/mozilla/pdf.js/security/advisories/GHSA-wgrm-67xf-hhpq). Every render now uses Mozilla's documented `isEvalSupported: false` mitigation. The page CSP also blocks JavaScript evaluation and inline scripts. This is a compatibility mitigation, not a dependency upgrade; a future PDF.js upgrade must update the library and worker together and preserve these settings. PDF scripting and XFA rendering are disabled.
+- **High: recoverable redactions.** Former exports only covered existing content with rectangles. Redacted exports now rebuild the whole document from masked pixels and abort on rendering/encoding failures. Adding files materializes edits and redactions before merging instead of reusing the original input.
+- **Medium: active PDF actions in exports.** Exports and merges disable PDF action dictionaries, including JavaScript, launch, external navigation, and form submission actions. The editor no longer inserts its own JavaScript OpenAction. Interactive links/actions and XFA are removed or disabled; ordinary AcroForm fields remain supported. This does not make ordinary exports a general-purpose PDF sanitizer or remove all hidden data; only the redaction export rebuilds from pixels.
+- **Medium: ambiguous server write targets.** Remote paths are validated for both reads and writes, decoded only once, and cleared when opening local documents. Requests refuse redirects. These client checks are not server authorization: the host must independently enforce authentication, CSRF protection, and filesystem confinement for `/system/file` and `/system/upload`. The firmware handlers in `src/portal.cpp` are outside this example's security boundary and still need that enforcement before exposure to untrusted clients.
+- PDF-derived labels and tooltip shortcuts are rendered with text nodes. The shortcut renderer previously called a nonexistent HTML escaping helper; it now works without an HTML sink.
+- Encrypted PDFs may be viewed after entering a password, but export/merge refuses them because pdf-lib cannot decrypt or preserve their protection. Decrypt a copy explicitly before editing.
+- CDN dependencies are pinned with script integrity hashes. The worker is still loaded from the pinned CDN URL; the CDN remains a trust dependency. Fabric's published SVG-serialization advisories do not have a reachable path here: the editor neither imports Fabric JSON from files nor exports/inserts SVG markup.
+
+### Regression checks
+
+Install Playwright in a temporary directory (no application build is required), then run:
+
+```sh
+npm install --prefix /tmp/pdf-editor-tests --no-package-lock playwright@1.58.2
+PLAYWRIGHT_MODULE=/tmp/pdf-editor-tests/node_modules/playwright node --test examples/pdf-editor/tests/security.test.cjs
+```
+
+The tests use Chromium; install it with Playwright if it is not already available. `PLAYWRIGHT_CHROMIUM_EXECUTABLE` can select an installed Chromium binary. For offline runs, `PDF_EDITOR_ASSET_DIR` can point to a directory containing the four pinned CDN scripts (`pdf.min.js`, `pdf.worker.min.js`, `pdf-lib.min.js`, `fabric.min.js`).

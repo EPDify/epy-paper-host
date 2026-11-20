@@ -16,14 +16,16 @@ const MergeManager = (() => {
 
         for (const file of pdfFiles) {
             try {
-                const srcDoc = await PDFLib.PDFDocument.load(file.data, { ignoreEncryption: true });
+                const srcDoc = await PDFLib.PDFDocument.load(file.data);
+                PDFSecurity.stripActions(srcDoc);
                 const copiedPages = await mergedDoc.copyPages(srcDoc, srcDoc.getPageIndices());
                 copiedPages.forEach(page => mergedDoc.addPage(page));
             } catch (err) {
-                Utils.toast(`Failed to merge "${file.name}": ${err.message}`, 'error');
+                throw new Error(`Failed to merge "${file.name}": ${err.message}`);
             }
         }
 
+        PDFSecurity.stripActions(mergedDoc);
         const mergedBytes = await mergedDoc.save();
         return mergedBytes.buffer;
     }
@@ -129,14 +131,12 @@ const ExportManager = (() => {
         const viewerPages = PDFViewer.getPages();
         if (!viewerPages.length) throw new Error('Document has no pages');
 
-        // Check if redaction rectangles exist
-        const redactionCount = AnnotationManager.countRedactions();
-        if (redactionCount > 0) {
-            Utils.toast(`Applying ${redactionCount} permanent redaction(s)`, 'info');
-        }
+        // Collect masks from the same objects we export, including lazy-loaded pages.
+        const redactionsByPage = viewerPages.map(() => []);
 
         // Load source document
-        let doc = await PDFLib.PDFDocument.load(currentBytes, { ignoreEncryption: true });
+        let doc = await PDFLib.PDFDocument.load(currentBytes);
+        PDFSecurity.stripActions(doc);
         const originalPageCount = doc.getPageCount();
 
         // Check page structure changes
@@ -151,26 +151,6 @@ const ExportManager = (() => {
         let exportedPages = [];
 
         function finalizeFormOnDoc(td) {
-            const injectDisableHighlight = () => {
-                try {
-                    const { PDFName, PDFString, PDFDict } = PDFLib;
-                    const jsAction = td.context.obj({
-                        Type: 'Action',
-                        S: 'JavaScript',
-                        JS: PDFString.of('try { app.runtimeHighlight = false; } catch(_) {}'),
-                    });
-                    const existingOpenAction = td.catalog.lookup(PDFName.of('OpenAction'));
-                    if (!existingOpenAction) {
-                        td.catalog.set(PDFName.of('OpenAction'), jsAction);
-                    } else if (existingOpenAction instanceof PDFDict) {
-                        jsAction.set(PDFName.of('Next'), existingOpenAction);
-                        td.catalog.set(PDFName.of('OpenAction'), jsAction);
-                    }
-                } catch (e) {
-                    console.warn('Could not add disable-highlight OpenAction', e);
-                }
-            };
-
             if (FormManager.getFlattenOption()) {
                 try {
                     td.getForm().flatten({ updateFieldAppearances: false });
@@ -181,11 +161,7 @@ const ExportManager = (() => {
                             try { f.enableReadOnly(); } catch (_) {}
                         });
                     } catch (_) {}
-                    injectDisableHighlight();
                 }
-            } else {
-                // Form is left interactive: inject document JavaScript to disable Acrobat runtime highlighting
-                injectDisableHighlight();
             }
         }
 
@@ -286,7 +262,7 @@ const ExportManager = (() => {
         for (let i = 0; i < viewerPages.length; i++) {
             const pg = viewerPages[i];
             const pdfPage = exportedPages[i];
-            if (!pdfPage) continue;
+            if (!pdfPage) throw new Error('Missing export page; export cancelled');
 
             const totalRot = PDFViewer.totalRotation(pg);
             pdfPage.setRotation(PDFLib.degrees(totalRot));
@@ -320,15 +296,18 @@ const ExportManager = (() => {
                 const rectH = Math.max(1, maxY - minY);
 
                 if (obj.annotationType === 'redact') {
-                    // Permanent black redaction rectangle
-                    pdfPage.drawRectangle({
-                        x: minX,
-                        y: minY,
-                        width: rectW,
-                        height: rectH,
-                        color: PDFLib.rgb(0, 0, 0),
-                        opacity: 1,
-                    });
+                    // Fabric's absolute bounding box includes rotation, scaling and flips.
+                    // Conservatively mask that entire box, then discard all source objects.
+                    const bounds = obj.getBoundingRect(true, true);
+                    const a = Geometry.displayToPdf(pg.box, totalRot, bounds.left, bounds.top);
+                    const b = Geometry.displayToPdf(pg.box, totalRot,
+                        bounds.left + bounds.width, bounds.top + bounds.height);
+                    if (![a.x, a.y, b.x, b.y, bounds.width, bounds.height].every(Number.isFinite) ||
+                        bounds.width <= 0 || bounds.height <= 0) {
+                        throw new Error('Invalid redaction area; export cancelled');
+                    }
+                    redactionsByPage[i].push([Math.min(a.x, b.x), Math.min(a.y, b.y),
+                        Math.max(a.x, b.x), Math.max(a.y, b.y)]);
                 } else if (obj.annotationType === 'erase') {
                     // White-out rectangle
                     pdfPage.drawRectangle({
@@ -425,10 +404,16 @@ const ExportManager = (() => {
             dispose();
         }
 
-        return await targetDoc.save({
+        PDFSecurity.stripActions(targetDoc);
+        const bytes = await targetDoc.save({
             useObjectStreams: false,
             updateFieldAppearances: false,
         });
+        if (redactionsByPage.some(rects => rects.length)) {
+            Utils.showSpinner('Redacting PDF: flattening all pages and removing hidden content...');
+            return await PDFSecurity.rasterizeRedactedPDF(bytes, redactionsByPage);
+        }
+        return bytes;
     }
 
     /**
@@ -458,6 +443,7 @@ const ExportManager = (() => {
      */
     async function uploadPDF(filePath) {
         try {
+            PDFSecurity.validateFilePath(filePath);
             Utils.showSpinner('Uploading PDF to server...');
             const bytes = await buildFinalPDF();
             const blob = new Blob([bytes], { type: 'application/pdf' });
@@ -467,6 +453,8 @@ const ExportManager = (() => {
 
             const response = await fetch('/system/upload', {
                 method: 'POST',
+                mode: 'same-origin',
+                redirect: 'error',
                 body: formData,
             });
 
@@ -596,19 +584,23 @@ function checkDocumentDirty() {
     });
 
     // -- Loading Workflow --
-    async function openPdfData(bytes, filename, isRemote = false) {
+    async function openPdfData(bytes, filename, filePath = null) {
+        // A failed or local load must not retain a previous server write target.
+        remoteFilePath = null;
+        btnUpload.style.display = 'none';
         currentFileName = filename || 'document.pdf';
         docTitle.textContent = currentFileName;
         setDocumentDirty(false);
 
         // Load into viewer
         await PDFViewer.loadDocument(bytes);
+        AnnotationManager.reset();
 
         // Load into pdf-lib to extract form fields and document properties
         let pdfLibDoc = null;
         let isEncrypted = false;
         try {
-            pdfLibDoc = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
+            pdfLibDoc = await PDFLib.PDFDocument.load(bytes);
         } catch (e) {
             console.warn('pdf-lib load warning:', e);
             if (e.message && e.message.toLowerCase().includes('encrypt')) {
@@ -642,6 +634,8 @@ function checkDocumentDirty() {
         }
 
         PDFViewer.zoomFit();
+        remoteFilePath = filePath;
+        btnUpload.style.display = filePath ? '' : 'none';
         showEditor();
     }
 
@@ -668,7 +662,7 @@ function checkDocumentDirty() {
             }
 
             btnUpload.style.display = 'none';
-            await openPdfData(finalBytes, name, false);
+            await openPdfData(finalBytes, name);
             Utils.hideSpinner();
             Utils.toast(`Loaded ${pdfFiles.length} file(s)`, 'success');
         } catch (err) {
@@ -680,10 +674,10 @@ function checkDocumentDirty() {
 
     async function loadRemoteFile(filePath) {
         try {
+            PDFSecurity.validateFilePath(filePath);
             Utils.showSpinner('Fetching remote PDF...');
             const pdfFile = await PDFLoader.fetchRemoteFile(filePath);
-            btnUpload.style.display = '';
-            await openPdfData(pdfFile.data, pdfFile.name, true);
+            await openPdfData(pdfFile.data, pdfFile.name, filePath);
             Utils.hideSpinner();
             Utils.toast(`Loaded: ${pdfFile.name}`, 'success');
         } catch (err) {
@@ -704,10 +698,12 @@ function checkDocumentDirty() {
                 Utils.hideSpinner();
                 return;
             }
-            const currentBytes = PDFViewer.getPdfBytes();
+            // Preserve edits and materialize redactions before merging; raw input
+            // bytes would silently restore the very content the user removed.
+            const currentBytes = await ExportManager.buildFinalPDF();
             const mergedBytes = await MergeManager.appendFiles(currentBytes, newFiles);
             currentFileName = 'merged.pdf';
-            await openPdfData(mergedBytes, currentFileName, !!remoteFilePath);
+            await openPdfData(mergedBytes, currentFileName, remoteFilePath);
             Utils.hideSpinner();
             setDocumentDirty(true);
             Utils.toast(`Merged ${newFiles.length} additional file(s)`, 'success');
@@ -897,8 +893,7 @@ function checkDocumentDirty() {
     // Check URL parameters for remote file load
     const filePathParam = Utils.getUrlParam('filePath');
     if (filePathParam) {
-        remoteFilePath = decodeURIComponent(filePathParam);
-        await loadRemoteFile(remoteFilePath);
+        await loadRemoteFile(filePathParam);
     } else {
         showLanding();
     }
