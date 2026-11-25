@@ -2663,7 +2663,7 @@ const FormManager = (() => {
                         try { form.markFieldAsClean(dd.ref); } catch (_) {}
                     }
                 } catch (err) {
-                    console.warn(`Failed to create new field ${f.name}`, err);
+                    console.warn('Failed to create a PDF form field');
                     warnings.push(`Could not create field "${f.name}": ${err.message}`);
                 }
                 continue;
@@ -2781,7 +2781,7 @@ const FormManager = (() => {
 
                 try { form.markFieldAsClean(field.ref); } catch (_) {}
             } catch (err) {
-                console.warn(`Failed to set field ${f.name}`, err);
+                console.warn('Failed to update a PDF form field');
                 warnings.push(`Could not set "${f.label || f.name}": ${err.message}`);
             }
         }
